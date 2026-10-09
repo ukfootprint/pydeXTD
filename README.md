@@ -4,6 +4,11 @@ A self-contained, single-file Python IDE that runs entirely in the browser — n
 
 Built for teaching (GCSE/A Level CS style exercises), but useful for any quick "write and run some Python" need.
 
+## Guides
+
+- **Teachers and tutors:** [docs/TEACHER-GUIDE.md](docs/TEACHER-GUIDE.md). Covers set-up on managed Chromebooks, data protection, teaching with each feature, making CODES packs and running mocks.
+- **Students:** [docs/STUDENT-GUIDE.md](docs/STUDENT-GUIDE.md).
+
 ## Features
 
 - **Run Python** — full CPython 3.13, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
