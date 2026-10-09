@@ -38,7 +38,7 @@ A couple of modules are **shimmed** rather than the real thing, because the brow
 
 `time.process_time()` doesn't work — it always reads `0.0`, even across genuine CPU-bound work, because it relies on OS-level CPU accounting that doesn't exist inside a WebAssembly sandbox. Use `time.time()` or `time.perf_counter()` for timing code instead; both work correctly.
 
-With **Run** there's currently no way to stop a running program from the page — an infinite loop or a long `time.sleep()` will freeze the tab, since Python runs on the same thread as the page itself. Reload the tab to recover. A program started with **Debug** can always be stopped.
+**Stop.** In Chrome and Edge 137 or later (Chromebooks included), a running program can always be stopped with the Stop button or Shift+F5. That includes infinite loops, long recursion, `time.sleep()` and programs waiting for `input()`. `time.sleep()` also no longer freezes the page. There, `input()` always uses the inline box, without the code rewriting described above. A hook counts loop iterations and function calls in your code and hands control back to the browser roughly every 50 ms; this costs about 2–3x on very tight loops and nothing on typical programs. In other browsers (Safari/iPad, Firefox), an infinite loop or long `time.sleep()` will still freeze the tab: reload to recover.
 
 ## Running it locally
 

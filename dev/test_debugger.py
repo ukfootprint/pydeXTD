@@ -1,7 +1,7 @@
-"""End-to-end tests for the pyde debugger, in headless Chromium (Playwright).
+"""End-to-end tests for pyde's debugger and Run Stop, in headless Chromium (Playwright).
 
 CDN requests are served from local npm copies so the tests run offline:
-    npm install pyodide@0.29.5 codemirror@5.65.16 lz-string@1.5.0
+    npm install pyodide@0.29.5 codemirror@5.65.16 lz-string@1.5.0 p5@1.9.4
     pip install playwright && python -m playwright install chromium
     PYDE_NODE_MODULES=path/to/node_modules python dev/test_debugger.py [path/to/index.html]
 """
@@ -23,6 +23,7 @@ CDN = {
     "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js": "codemirror/addon/edit/closebrackets.js",
     "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js": "codemirror/addon/search/searchcursor.js",
     "https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js": "lz-string/libs/lz-string.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js": "p5/lib/p5.min.js",
 }
 PYODIDE_PREFIX = "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/"
 
@@ -236,7 +237,107 @@ with sync_playwright() as p:
     click("#debug-btn"); paused_line()
     for _ in range(4): click("#dbg-into"); paused_line()
     page.screenshot(path=f"{SHOTS}/debug_paused_light.png")
-    click("#dbg-stop")
+    click("#dbg-stop"); wait_status("document.getElementById('status-text').textContent === 'Stopped'")
+    page.click("#theme-toggle")
+
+    # ---------------- Stop for Run ----------------
+    def run_and_wait(src, timeout=20000):
+        set_code(src); click("#run-btn")
+        page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=timeout)
+    def responsive():
+        t0 = page.evaluate("performance.now()"); page.evaluate("new Promise(r => setTimeout(r, 100))"); t1 = page.evaluate("performance.now()")
+        return t1 - t0
+    def start_run(src):
+        set_code(src); click("#run-btn"); time.sleep(0.8)
+
+    check("S1. Run's Stop button hidden when idle", not page.is_visible("#run-stop-btn"))
+    start_run("while True:\n    pass\n")
+    check("S2. Stop button shown while running; page responsive in an infinite loop",
+          page.is_visible("#run-stop-btn") and responsive() < 1000 and status() == "Running")
+    click("#run-stop-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S3. Stop ends an infinite loop cleanly", console().strip() == "[Program stopped]" and status() == "Stopped"
+          and not page.is_visible("#run-stop-btn"), console())
+
+    start_run("def fib(n):\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\nprint(fib(40))\n")
+    r = responsive(); click("#run-stop-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S4. Stop ends long recursion (no loops)", "[Program stopped]" in console() and r < 1000, f"timer {r:.0f} ms")
+
+    set_code('name = input("Name? ")\nprint("never")\n'); click("#run-btn")
+    page.wait_for_selector("#console-output .console-inline-input", timeout=10000)
+    click("#run-stop-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S5. Stop while waiting for input()", "[Program stopped]" in console() and "never" not in console(), console())
+
+    t0 = time.time()
+    run_and_wait('import time\nprint("a")\ntime.sleep(0.5)\nprint("b")\n')
+    el = time.time() - t0
+    check("S6. time.sleep() still waits the right time", console().split() == ["a", "b"] and 0.5 <= el < 5, f"{el:.2f}s")
+    start_run('import time\nprint("start")\ntime.sleep(30)\nprint("never")\n')
+    r = responsive(); t0 = time.time(); click("#run-stop-btn")
+    page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S7. Page responsive during time.sleep(30), and Stop interrupts it", r < 1000 and "[Program stopped]" in console() and time.time() - t0 < 2,
+          f"timer {r:.0f} ms, stop took {time.time() - t0:.2f}s")
+
+    set_code("while True:\n    pass\n"); page.keyboard.press("F5"); time.sleep(0.8)
+    running = status() == "Running"
+    page.keyboard.press("Shift+F5"); page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S8. F5 runs and Shift+F5 stops", running and "[Program stopped]" in console())
+
+    set_code('def ask():\n    return input("Name? ")\nn = ask()\nprint("Hi " + n)\n'); click("#run-btn")
+    page.wait_for_selector("#console-output .console-inline-input", timeout=10000)
+    page.fill("#console-output .console-inline-input", "Ada"); page.press("#console-output .console-inline-input", "Enter")
+    page.wait_for_function("!document.getElementById('run-btn').disabled")
+    check("S9. Run after Stop works, input() inline", "Hi Ada" in console() and status() == "Ready", console())
+
+    set_code('f = input\nx = f("Q? ")\nprint(x * 2)\n'); click("#run-btn")
+    page.wait_for_selector("#console-output .console-inline-input", timeout=10000)
+    page.fill("#console-output .console-inline-input", "ab"); page.press("#console-output .console-inline-input", "Enter")
+    page.wait_for_function("!document.getElementById('run-btn').disabled")
+    check("S10. Aliased input() is inline too (used to need a popup)", "abab" in console(), console())
+
+    run_and_wait("raise ValueError('boom')\n")
+    check("S11. Ordinary errors still show a traceback", "ValueError: boom" in console() and status() == "Ready")
+
+    run_and_wait('import turtle, time\nt = turtle.Turtle()\nfor _ in range(4):\n    t.forward(40)\n    t.left(90)\n    time.sleep(0.05)\nprint("ok")\n')
+    check("S12. Turtle with time.sleep under Run", "ok" in console() and "Error" not in console(), console())
+
+    start_run("def check(v):\n    try:\n        return int(v)\n    except:\n        return None\nwhile True:\n    try:\n        check('x')\n    except Exception:\n        pass\n")
+    click("#run-stop-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled", timeout=5000)
+    check("S14. Stop gets out even when the loop swallows exceptions", "[Program stopped]" in console(), console())
+
+    timing = page.evaluate("""async () => {
+        const src = "t = 0\\nfor i in range(1000000):\\n    t += i\\n";
+        let a = performance.now(); await pyodide.runPythonAsync(src, {filename: '<program>'}); const plain = performance.now() - a;
+        pyodide.runPython('_pyde_run_guard.start()');
+        a = performance.now(); try { await pyodide.runPythonAsync(src, {filename: '<program>'}); } finally { pyodide.runPython('_pyde_run_guard.finish()'); }
+        return {plain, guarded: performance.now() - a}; }""")
+    check("S13. Stop-guard overhead on a tight 1M loop", timing["guarded"] < timing["plain"] * 5,
+          f"{timing['plain']:.0f} ms without, {timing['guarded']:.0f} ms with ({timing['guarded'] / timing['plain']:.1f}x)")
+
+    run_and_wait("import p5\ndef setup():\n    p5.createCanvas(100, 100)\ndef draw():\n    p5.background(200)\n")
+    page.wait_for_selector("#p5-container canvas", timeout=15000)
+    check("S15. p5 sketch still runs (input/sleep restored for draw())", status() == "Ready")
+    check("S16. No uncaught page errors (Run section)", not errors, "; ".join(errors[:3]))
+
+    # ---------------- browsers without JSPI (Firefox, Safari/iPad) ----------------
+    nctx = b.new_context(viewport={"width": 1366, "height": 768})
+    nctx.route("**/*", route)
+    nctx.add_init_script("delete WebAssembly.Suspending; delete WebAssembly.promising;")
+    npage = nctx.new_page(); nerrs = []
+    npage.on("pageerror", lambda e: nerrs.append(str(e)))
+    npage.goto("file:///" + PYDE.replace(os.sep, "/").lstrip("/"))
+    npage.wait_for_function("document.getElementById('status-text').textContent === 'Ready'", timeout=60000)
+    if npage.is_visible("#about-close"): npage.click("#about-close")
+    check("N1. No JSPI: page loads, Debug disabled", npage.is_disabled("#debug-btn"))
+    npage.evaluate("(s) => document.querySelector('.CodeMirror').CodeMirror.setValue(s)",
+                   'import time\ndef ask():\n    return input("Name? ")\nn = ask()\ntime.sleep(0.1)\nprint("Hi " + n)\n')
+    npage.click("#run-btn")
+    npage.wait_for_selector("#console-output .console-inline-input", timeout=10000)
+    stop_shown = npage.is_visible("#run-stop-btn")
+    npage.fill("#console-output .console-inline-input", "Bo"); npage.press("#console-output .console-inline-input", "Enter")
+    npage.wait_for_function("!document.getElementById('run-btn').disabled")
+    check("N2. No JSPI: Run + inline input via the original AST rewrite, no Stop button",
+          "Hi Bo" in npage.inner_text("#console-output") and not stop_shown and not nerrs, npage.inner_text("#console-output") + " ".join(nerrs))
+    nctx.close()
     b.close()
 
 print(f"\n{sum(results)}/{len(results)} passed")
