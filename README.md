@@ -6,7 +6,8 @@ Built for teaching (GCSE/A Level CS style exercises), but useful for any quick "
 
 ## Features
 
-- **Run Python** — full CPython 3.12, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
+- **Run Python** — full CPython 3.13, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
+- **Debug** — step through a program one line at a time, Thonny-style: step into / over / out, continue, stop, and breakpoints (click the margin by a line number). A panel shows the call stack and each function's variables, highlights values that changed on the last step, and shows what a function just returned. `input()` works anywhere in the program while debugging, and turtle drawings build up live as you step. Needs Chrome or Edge 137+ (ChromeOS included); see [DEBUGGER.md](DEBUGGER.md).
 - **New** — a clearly-labelled way to start a blank program, distinct from just deleting everything in the editor (which reads as normal practice to a pupil watching, when the point is to save the old one and start a deliberate new one).
 - **Syntax highlighting** — [CodeMirror 5](https://codemirror.net/5/) with a Python mode and a dark (Dracula) / light (Eclipse) theme toggle. Copying a selection also writes a colour-highlighted `text/html` version to the clipboard alongside the plain text, matching the current theme, so pasting into Word/OneNote/Google Docs keeps the syntax colours instead of landing as flat text.
 - **Multi-cursor editing** — select a word and press `Cmd-D` / `Ctrl-D` to select the next occurrence, VS Code / Sublime style.
@@ -37,7 +38,7 @@ A couple of modules are **shimmed** rather than the real thing, because the brow
 
 `time.process_time()` doesn't work — it always reads `0.0`, even across genuine CPU-bound work, because it relies on OS-level CPU accounting that doesn't exist inside a WebAssembly sandbox. Use `time.time()` or `time.perf_counter()` for timing code instead; both work correctly.
 
-There's currently no way to stop a running program from the page — an infinite loop or a long `time.sleep()` will freeze the tab, since Python runs on the same thread as the page itself. Reload the tab to recover.
+With **Run** there's currently no way to stop a running program from the page — an infinite loop or a long `time.sleep()` will freeze the tab, since Python runs on the same thread as the page itself. Reload the tab to recover. A program started with **Debug** can always be stopped.
 
 ## Running it locally
 

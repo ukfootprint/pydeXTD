@@ -174,6 +174,37 @@
   .about-modal a{ color:var(--cyan); }
   .about-modal code{ font-family:'Fira Code',monospace; font-variant-ligatures:none; font-feature-settings:"liga" 0,"calt" 0,"dlig" 0; -webkit-font-feature-settings:"liga" 0,"calt" 0,"dlig" 0; background:var(--panel-bg); padding:.05rem .3rem; border-radius:3px; }
   .hidden{ display:none !important; }
+
+  /* ---------- Debugger ---------- */
+  .debug-controls{ display:inline-flex; gap:.25rem; padding:.15rem .3rem; border:1px solid var(--orange); border-radius:6px; }
+  .toolbar .debug-controls button{ padding:.34rem .6rem; }
+  .toolbar button.debug-btn{ background:var(--orange); }
+  .toolbar button.stop-btn{ background:var(--red); color:#fff; }
+  .CodeMirror .breakpoints{ width:1.1em; }
+  .bp-marker{ color:var(--red); font-size:1em; line-height:1; cursor:pointer; padding-left:.15em; }
+  .CodeMirror-gutter-elt .bp-marker{ display:inline-block; }
+  .debug-current-line{ background:rgba(255,184,108,.28) !important; }
+  .debug-error-line{ background:rgba(255,85,85,.25) !important; }
+  .debug-readonly .CodeMirror-cursors{ visibility:hidden !important; }
+  #debug-pane{
+    flex:0 0 auto; max-height:45%; min-height:7rem; overflow:auto; border-top:2px solid var(--orange);
+    background:var(--panel-bg); display:flex; gap:.6rem; padding:.45rem .7rem; font-size:var(--editor-font-size,14px);
+  }
+  #debug-pane h3{ margin:0 0 .3rem; font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--comment); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  #debug-stack-col{ flex:0 0 30%; min-width:0; }
+  #debug-vars-col{ flex:1; min-width:0; }
+  #debug-stack{ list-style:none; margin:0; padding:0; font-family:'Fira Code',monospace; font-size:.85em; }
+  #debug-stack li{ padding:.15rem .4rem; border-radius:4px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #debug-stack li.selected{ background:var(--current-line); color:var(--orange); font-weight:600; }
+  #debug-vars{ width:100%; border-collapse:collapse; font-family:'Fira Code',monospace; font-size:.85em; }
+  #debug-vars td{ padding:.12rem .4rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  #debug-vars td.name{ color:var(--cyan); white-space:nowrap; width:1%; }
+  #debug-vars td.type{ color:var(--comment); white-space:nowrap; width:1%; font-size:.85em; }
+  #debug-vars td.value{ word-break:break-word; white-space:pre-wrap; }
+  #debug-vars tr.changed td{ background:rgba(80,250,123,.14); }
+  #debug-vars tr.changed td.value{ color:var(--green); font-weight:600; }
+  #debug-vars tr.retval td.name{ color:var(--pink); }
+  .debug-empty{ color:var(--comment); font-style:italic; font-size:.85em; }
 </style>
 <script>
 /* Applied as early as possible, before the toolbar renders, to avoid a flash
@@ -189,6 +220,14 @@
 <header class="toolbar">
   <h1>&#128013; Python IDE</h1>
   <button id="run-btn" disabled title="If a program hangs (e.g. an infinite loop or a long time.sleep), this tab will freeze — reload the page to recover.">&#9654; Run</button>
+  <button id="debug-btn" class="debug-btn" disabled title="Debug: run your program one line at a time (Ctrl+F5). Click in the margin left of a line number to set a breakpoint.">&#128027; Debug</button>
+  <span id="debug-controls" class="debug-controls hidden">
+    <button id="dbg-into" title="Step into (F7): run the next line, going inside any function it calls">&#8615; Into</button>
+    <button id="dbg-over" title="Step over (F6): run the next line, without stopping inside functions it calls">&#8631; Over</button>
+    <button id="dbg-out" title="Step out: finish the current function and stop back where it was called">&#8613; Out</button>
+    <button id="dbg-continue" title="Continue (F8): run until the next breakpoint or the end">&#9193; Continue</button>
+    <button id="dbg-stop" class="stop-btn" title="Stop the program (Shift+F5)">&#9632; Stop</button>
+  </span>
   <button id="new-btn" class="secondary" title="Start a new, blank program">&#128196; New</button>
   <input id="filename-input" type="text" value="program.py" title="Filename for download">
   <button id="download-btn" class="secondary">&#11015; Download</button>
@@ -212,7 +251,8 @@
     <h2>About this page</h2>
     <p>Everything here runs entirely in <strong>your own browser</strong> &mdash; Python is executed locally via WebAssembly, and nothing you write or run is ever uploaded to or executed on a server.</p>
     <p>Share links work the same way: the code is packed into the link itself (after the <code>#</code>), which browsers never send to the server. So a shared link doesn't put anything on our infrastructure &mdash; but it does mean a link can carry <em>any</em> program. Please don't run code from a shared link you don't trust: while your tab is open, that code can still change what's on this page.</p>
-    <p>Because Python runs on this same tab, a program with an infinite loop (or a very long <code>time.sleep</code>) will freeze the page completely &mdash; there's currently no way to stop it from here. If that happens, reload the tab to recover.</p>
+    <p>Because Python runs on this same tab, a program with an infinite loop (or a very long <code>time.sleep</code>) will freeze the page completely when you click <strong>Run</strong>. If that happens, reload the tab to recover. Programs started with <strong>Debug</strong> can always be stopped with the Stop button.</p>
+    <p><strong>Debug</strong> runs your program one line at a time and shows the variables as they change. Click in the margin next to a line number to set a breakpoint. Keys: Ctrl+F5 debug, F7 step into, F6 step over, F8 continue, Shift+F5 stop. Needs Chrome or Edge 137 or later (Chromebooks included).</p>
     <p>Source, licence, and details of how this was built: <a href="https://github.com/milesberry/pyde" target="_blank" rel="noopener">github.com/milesberry/pyde</a>.</p>
     <button id="about-close">Got it</button>
   </div>
@@ -259,6 +299,16 @@ print("Hello, world!")
     <div class="tab-content hidden" id="tab-files">
       <p id="files-empty">No files written by the program yet.</p>
       <ul id="files-list"></ul>
+    </div>
+    <div id="debug-pane" class="hidden">
+      <div id="debug-stack-col">
+        <h3>Call stack</h3>
+        <ul id="debug-stack"></ul>
+      </div>
+      <div id="debug-vars-col">
+        <h3 id="debug-vars-title">Variables</h3>
+        <table id="debug-vars"><tbody></tbody></table>
+      </div>
     </div>
   </section>
 </main>
@@ -325,7 +375,9 @@ print("Hello, world!")
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<!-- 0.29.x (not 0.26) is needed for the debugger: run_sync() stack switching
+     via JSPI only works with Chrome 137+ from Pyodide 0.27.7 onwards. -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js"></script>
 
 <script>
 /* ---------- Python shim source: canvas-backed turtle module ---------- */
@@ -902,6 +954,7 @@ const editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
   mode: 'python',
   theme: currentTheme === 'light' ? 'eclipse' : 'dracula',
   lineNumbers: true,
+  gutters: ['breakpoints', 'CodeMirror-linenumbers'],
   matchBrackets: true,
   autoCloseBrackets: true,
   inputStyle: isTouchDevice ? 'contenteditable' : 'textarea',
@@ -1488,10 +1541,12 @@ async function initPyodide() {
   await pyodide.runPythonAsync(P5_MODULE_SRC);
   await pyodide.runPythonAsync(INPUT_OVERRIDE_SRC);
   await pyodide.runPythonAsync(INPUT_GENERATOR_SRC);
+  await pyodide.runPythonAsync(DEBUGGER_SRC);
   pyodideReady = true;
   document.getElementById('status-dot').classList.add('ready');
   document.getElementById('status-text').textContent = 'Ready';
   runBtn.disabled = false;
+  document.getElementById('debug-btn').disabled = !jspiSupported;
   document.getElementById('tidy-btn').disabled = false;
 }
 initPyodide().catch(err => {
@@ -1728,6 +1783,424 @@ async function runCode() {
   }
 }
 runBtn.addEventListener('click', runCode);
+
+/* ---------- Debugger ----------
+   Runs the program under sys.settrace. At each line where it should stop, the
+   trace function calls run_sync() on a JS promise that only resolves when the
+   pupil presses a step/continue button. run_sync() uses JSPI (WebAssembly
+   JavaScript Promise Integration) to suspend the WebAssembly stack mid-call,
+   so the interpreter genuinely pauses while the page stays fully responsive -
+   no Web Worker, no SharedArrayBuffer, no cross-origin-isolation headers, and
+   it still works from file://. Needs Chrome/Edge 137+ (incl. ChromeOS) and
+   Pyodide 0.27.7+; elsewhere the Debug button is disabled with an explanation.
+
+   Because input() can also just await a promise via run_sync, input() inside
+   the debugger works anywhere in the program (nested functions, recursion,
+   lambdas...) with no AST rewriting, and the inline console input box is used. */
+const DEBUGGER_SRC = `
+import sys as _sys, builtins as _builtins, traceback as _traceback, json as _json, linecache as _linecache
+import js as _js
+from pyodide.ffi import run_sync as _run_sync
+
+_PYDE_FILE = "<program>"
+
+class _PydeDebugger:
+    YIELD_EVERY = 1500   # lines between hand-backs to the browser while running freely
+
+    def __init__(self, breakpoints, mode):
+        self.breakpoints = set(int(b) for b in breakpoints)
+        self.mode = mode            # "into" | "over" | "out" | "continue"
+        self.target_depth = 0
+        self.stop_requested = False
+        self.since_yield = 0
+        self.last_return = None     # (function name, repr) from the most recent return
+
+    # -- helpers ---------------------------------------------------------
+    @staticmethod
+    def depth(frame):
+        d = 0
+        while frame is not None:
+            if frame.f_code.co_filename == _PYDE_FILE:
+                d += 1
+            frame = frame.f_back
+        return d
+
+    @staticmethod
+    def _short_repr(v, limit=300):
+        if type(v).__name__ == "function" and getattr(v, "__code__", None) is not None \
+                and v.__code__.co_filename == _PYDE_FILE:
+            try:
+                import inspect
+                return "def " + v.__name__ + str(inspect.signature(v))
+            except Exception:
+                pass
+        try:
+            r = repr(v)
+        except Exception:
+            r = "<unprintable>"
+        return r if len(r) <= limit else r[:limit] + " ..."
+
+    def snapshot(self, frame):
+        frames = []
+        f = frame
+        while f is not None:
+            if f.f_code.co_filename == _PYDE_FILE:
+                vars_ = []
+                for k, v in list(f.f_locals.items()):
+                    if k.startswith("__") or k == "input":
+                        continue
+                    if f.f_code.co_name == "<module>" and type(v).__name__ == "module":
+                        continue
+                    vars_.append([k, type(v).__name__, self._short_repr(v)])
+                name = "(main program)" if f.f_code.co_name == "<module>" else f.f_code.co_name + "()"
+                frames.append({"name": name, "line": f.f_lineno, "vars": vars_})
+            f = f.f_back
+        frames.reverse()   # outermost first
+        info = {"frames": frames}
+        if self.last_return is not None:
+            info["returned"] = self.last_return
+            self.last_return = None
+        return _json.dumps(info)
+
+    def should_pause(self, frame, depth):
+        if frame.f_lineno in self.breakpoints:
+            return True
+        if self.mode == "into":
+            return True
+        if self.mode == "over":
+            return depth <= self.target_depth
+        if self.mode == "out":
+            return depth < self.target_depth
+        return False
+
+    # -- the trace function ----------------------------------------------
+    def trace(self, frame, event, arg):
+        if frame.f_code.co_filename != _PYDE_FILE:
+            return None            # never trace turtle/p5 shims or library code
+        if self.stop_requested:
+            raise KeyboardInterrupt
+        if event == "line":
+            depth = self.depth(frame)
+            if self.should_pause(frame, depth):
+                self.since_yield = 0
+                cmd = str(_run_sync(_js._pydeDebugPause(frame.f_lineno, self.snapshot(frame))))
+                if cmd == "stop" or self.stop_requested:
+                    self.stop_requested = True
+                    raise KeyboardInterrupt
+                self.mode = cmd
+                self.target_depth = depth
+            else:
+                self.since_yield += 1
+                if self.since_yield >= self.YIELD_EVERY:
+                    # let the browser repaint and handle the Stop button
+                    self.since_yield = 0
+                    _run_sync(_js._pydeDebugYield())
+                    if self.stop_requested:
+                        raise KeyboardInterrupt
+        elif event == "return" and frame.f_code.co_name != "<module>":
+            self.last_return = [frame.f_code.co_name, self._short_repr(arg)]
+        return self.trace
+
+
+_pyde_debugger = None
+
+def _pyde_debug_input(prompt=""):
+    return str(_run_sync(_js._pydeDebugInput(str(prompt))))
+
+def _pyde_request_stop():
+    if _pyde_debugger is not None:
+        _pyde_debugger.stop_requested = True
+
+def _pyde_debug_run(src, breakpoints, mode):
+    global _pyde_debugger
+    try:
+        code = compile(src, _PYDE_FILE, "exec")
+    except SyntaxError:
+        _traceback.print_exc(limit=0)
+        return _json.dumps({"status": "error", "line": _sys.exc_info()[1].lineno})
+    # register the source so tracebacks can quote the pupil's lines
+    _linecache.cache[_PYDE_FILE] = (len(src), None, src.splitlines(True), _PYDE_FILE)
+    ns = {"__name__": "__main__", "__builtins__": _builtins, "input": _pyde_debug_input}
+    _pyde_debugger = _PydeDebugger(list(breakpoints), mode)
+    result = {"status": "finished"}
+    _sys.settrace(_pyde_debugger.trace)
+    try:
+        exec(code, ns)
+    except KeyboardInterrupt:
+        _sys.settrace(None)
+        result = {"status": "stopped"}
+    except BaseException as e:
+        _sys.settrace(None)
+        tb = e.__traceback__
+        line = None
+        while tb is not None:
+            if tb.tb_frame.f_code.co_filename == _PYDE_FILE:
+                line = tb.tb_lineno
+            tb = tb.tb_next
+        # show only the pupil's own frames, like a normal traceback of their file
+        frames = [f for f in _traceback.extract_tb(e.__traceback__) if f.filename == _PYDE_FILE]
+        msg = "Traceback (most recent call last):\\n" + "".join(_traceback.format_list(frames))
+        msg += "".join(_traceback.format_exception_only(type(e), e))
+        print(msg.rstrip(), file=_sys.stderr)
+        result = {"status": "error", "line": line}
+    finally:
+        _sys.settrace(None)
+        _pyde_debugger = None
+    return _json.dumps(result)
+`;
+
+const debugBtn = document.getElementById('debug-btn');
+const debugControls = document.getElementById('debug-controls');
+const debugPane = document.getElementById('debug-pane');
+const jspiSupported = typeof WebAssembly !== 'undefined' && typeof WebAssembly.Suspending === 'function';
+let isDebugging = false;
+let debugResume = null;          // resolves the promise the paused trace function is waiting on
+let debugCurrentLine = null;     // CodeMirror line handle currently highlighted
+let debugErrorLine = null;
+let debugLastFrames = null;      // previous pause's frames, to highlight changed values
+let debugSelectedFrame = -1;
+let debugFrames = [];
+let debugReturned = null;
+
+if (!jspiSupported) {
+  debugBtn.title = 'The debugger needs a recent Chrome or Edge (version 137 or later), including on Chromebooks. This browser can still Run programs normally.';
+}
+
+/* -- breakpoints: click in the gutter to the left of the line numbers -- */
+function makeBreakpointMarker() {
+  const m = document.createElement('span');
+  m.className = 'bp-marker';
+  m.textContent = '●';
+  m.title = 'Breakpoint - click to remove';
+  return m;
+}
+function toggleBreakpoint(cm, line) {
+  const info = cm.lineInfo(line);
+  const has = info.gutterMarkers && info.gutterMarkers.breakpoints;
+  cm.setGutterMarker(line, 'breakpoints', has ? null : makeBreakpointMarker());
+}
+editor.on('gutterClick', (cm, line, gutter) => {
+  if (gutter === 'breakpoints' || gutter === 'CodeMirror-linenumbers') toggleBreakpoint(cm, line);
+});
+function getBreakpoints() {
+  const lines = [];
+  editor.eachLine(h => {
+    if (h.gutterMarkers && h.gutterMarkers.breakpoints) lines.push(editor.getLineNumber(h) + 1);
+  });
+  return lines;
+}
+
+/* -- line highlighting -- */
+function clearDebugHighlight() {
+  if (debugCurrentLine) { editor.removeLineClass(debugCurrentLine, 'background', 'debug-current-line'); debugCurrentLine = null; }
+}
+function clearErrorHighlight() {
+  if (debugErrorLine) { editor.removeLineClass(debugErrorLine, 'background', 'debug-error-line'); debugErrorLine = null; }
+}
+function highlightDebugLine(lineNo) {
+  clearDebugHighlight();
+  debugCurrentLine = editor.addLineClass(lineNo - 1, 'background', 'debug-current-line');
+  editor.scrollIntoView({ line: lineNo - 1, ch: 0 }, 60);
+}
+editor.on('change', clearErrorHighlight);
+
+/* -- variables / call-stack panel -- */
+function renderDebugPane() {
+  const stackEl = document.getElementById('debug-stack');
+  stackEl.innerHTML = '';
+  debugFrames.forEach((f, i) => {
+    const li = document.createElement('li');
+    li.textContent = f.name + '  line ' + f.line;
+    if (i === debugSelectedFrame) li.classList.add('selected');
+    li.addEventListener('click', () => {
+      debugSelectedFrame = i;
+      renderDebugPane();
+      highlightDebugLine(f.line);
+    });
+    stackEl.appendChild(li);
+  });
+
+  const tbody = document.querySelector('#debug-vars tbody');
+  tbody.innerHTML = '';
+  const frame = debugFrames[debugSelectedFrame];
+  document.getElementById('debug-vars-title').textContent =
+    frame ? 'Variables in ' + frame.name : 'Variables';
+  if (!frame) return;
+
+  // values that changed since the last pause, in the same function
+  let prev = null;
+  if (debugLastFrames) {
+    const sameDepth = debugLastFrames[debugSelectedFrame];
+    if (sameDepth && sameDepth.name === frame.name) prev = Object.fromEntries(sameDepth.vars.map(v => [v[0], v[2]]));
+  }
+  const isTop = debugSelectedFrame === debugFrames.length - 1;
+  if (isTop && debugReturned) {
+    const tr = document.createElement('tr');
+    tr.className = 'retval';
+    tr.innerHTML = '<td class="name"></td><td class="type">returned</td><td class="value"></td>';
+    tr.children[0].textContent = debugReturned[0] + '()';
+    tr.children[2].textContent = debugReturned[1];
+    tbody.appendChild(tr);
+  }
+  if (frame.vars.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="debug-empty" colspan="3">No variables yet</td>';
+    tbody.appendChild(tr);
+  }
+  frame.vars.forEach(([name, type, value]) => {
+    const tr = document.createElement('tr');
+    if (prev && (!(name in prev) || prev[name] !== value)) tr.classList.add('changed');
+    tr.innerHTML = '<td class="name"></td><td class="type"></td><td class="value"></td>';
+    tr.children[0].textContent = name;
+    tr.children[1].textContent = type;
+    tr.children[2].textContent = value;
+    tbody.appendChild(tr);
+  });
+}
+
+/* -- called from Python -- */
+window._pydeDebugPause = function (lineNo, snapshotJson) {
+  const snap = JSON.parse(snapshotJson);
+  debugLastFrames = debugFrames.length ? debugFrames : null;
+  debugFrames = snap.frames;
+  debugReturned = snap.returned || null;
+  debugSelectedFrame = debugFrames.length - 1;
+  highlightDebugLine(lineNo);
+  renderDebugPane();
+  setDebugStepping(true);
+  document.getElementById('status-text').textContent = 'Paused at line ' + lineNo;
+  return new Promise(resolve => { debugResume = resolve; });
+};
+window._pydeDebugYield = function () {
+  return new Promise(resolve => setTimeout(resolve, 0));
+};
+window._pydeDebugInput = function (promptText) {
+  clearDebugHighlight();
+  setDebugStepping(false);
+  document.getElementById('status-text').textContent = 'Waiting for input';
+  switchTab('console');
+  return requestInlineInput(promptText).then(v => {
+    document.getElementById('status-text').textContent = 'Debugging';
+    return v;
+  });
+};
+
+/* -- buttons -- */
+function setDebugStepping(enabled) {
+  ['dbg-into', 'dbg-over', 'dbg-out', 'dbg-continue'].forEach(id => {
+    document.getElementById(id).disabled = !enabled;
+  });
+}
+function debugCommand(cmd) {
+  if (!isDebugging) return;
+  if (cmd === 'stop') {
+    pyodide.globals.get('_pyde_request_stop')();
+    // also cancel a pending inline input() box, if that's what we're waiting on
+    const pendingInput = document.querySelector('#console-output .console-inline-input');
+    if (pendingInput) {
+      pendingInput.value = '';
+      pendingInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    }
+  }
+  if (!debugResume) return;
+  const r = debugResume;
+  debugResume = null;
+  clearDebugHighlight();
+  setDebugStepping(false);
+  if (cmd !== 'stop') document.getElementById('status-text').textContent = cmd === 'continue' ? 'Running' : 'Debugging';
+  r(cmd);
+}
+document.getElementById('dbg-into').addEventListener('click', () => debugCommand('into'));
+document.getElementById('dbg-over').addEventListener('click', () => debugCommand('over'));
+document.getElementById('dbg-out').addEventListener('click', () => debugCommand('out'));
+document.getElementById('dbg-continue').addEventListener('click', () => debugCommand('continue'));
+document.getElementById('dbg-stop').addEventListener('click', () => debugCommand('stop'));
+
+// Thonny-style keys: Ctrl+F5 debug, F6 over, F7 into, F8 continue, Shift+F5 stop.
+// (On a Chromebook, hold Search/Launcher with the top-row keys to get F-keys.)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F5' && e.ctrlKey && !isDebugging) { e.preventDefault(); debugCode(); return; }
+  if (!isDebugging) return;
+  const map = { F6: 'over', F7: 'into', F8: 'continue' };
+  if (e.key === 'F5' && e.shiftKey) { e.preventDefault(); debugCommand('stop'); return; }
+  if (map[e.key]) { e.preventDefault(); if (debugResume) debugCommand(map[e.key]); }
+});
+
+async function debugCode() {
+  if (!pyodideReady || isRunning || isDebugging) return;
+  if (!jspiSupported) {
+    showToast('The debugger needs Chrome or Edge 137 or later (Chromebooks included).');
+    return;
+  }
+  const code = editor.getValue();
+  const isTurtle = /\bimport\s+turtle\b|\bfrom\s+turtle\s+import\b/.test(code);
+  const isP5 = !isTurtle && (/\bimport\s+p5\b|\bfrom\s+p5\s+import\b/.test(code) || /def\s+draw\s*\(\s*\)\s*:/.test(code));
+  if (isP5) {
+    showToast('The debugger doesn’t support p5 sketches yet - use Run.');
+    return;
+  }
+
+  isDebugging = true;
+  isRunning = true;
+  runBtn.disabled = true;
+  debugBtn.classList.add('hidden');
+  debugControls.classList.remove('hidden');
+  setDebugStepping(false);
+  debugPane.classList.remove('hidden');
+  debugFrames = []; debugLastFrames = null; debugReturned = null;
+  renderDebugPane();
+  editor.setOption('readOnly', true);
+  editor.getWrapperElement().classList.add('debug-readonly');
+  clearErrorHighlight();
+  clearConsole();
+  document.getElementById('status-text').textContent = 'Debugging';
+
+  let result = { status: 'error' };
+  try {
+    if (isTurtle) {
+      // Turtle drawing updates live as you step - nice for seeing loops build a shape.
+      const turtleCanvas = document.getElementById('turtle-canvas');
+      turtleCanvas.style.display = 'block';
+      document.getElementById('p5-container').style.display = 'none';
+      const ctx = turtleCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, turtleCanvas.width, turtleCanvas.height);
+      pyodide.globals.set('_TURTLE_SRC_TEXT', TURTLE_SRC);
+      await resetTurtleShim(ctx, turtleCanvas);
+    }
+    switchTab('console');
+    writeVirtualFile();
+    const before = snapshotFS();
+    pyodide.globals.set('_pyde_debug_src', code);
+    pyodide.globals.set('_pyde_debug_bps', pyodide.toPy(getBreakpoints()));
+    // runPythonAsync (not runPython) is what lets run_sync() stack-switch.
+    result = JSON.parse(await pyodide.runPythonAsync('_pyde_debug_run(_pyde_debug_src, _pyde_debug_bps, "into")'));
+    diffAndListFiles(before);
+  } catch (err) {
+    appendConsole(String(err.message || err), 'stderr');
+  } finally {
+    isDebugging = false;
+    isRunning = false;
+    debugResume = null;
+    clearDebugHighlight();
+    editor.setOption('readOnly', false);
+    editor.getWrapperElement().classList.remove('debug-readonly');
+    debugControls.classList.add('hidden');
+    debugBtn.classList.remove('hidden');
+    runBtn.disabled = false;
+    debugPane.classList.add('hidden');
+  }
+  if (result.status === 'stopped') {
+    appendConsole('[Program stopped]', 'stderr');
+    document.getElementById('status-text').textContent = 'Stopped';
+  } else if (result.status === 'error') {
+    if (result.line) debugErrorLine = editor.addLineClass(result.line - 1, 'background', 'debug-error-line');
+    document.getElementById('status-text').textContent = result.line ? 'Error on line ' + result.line : 'Error';
+  } else {
+    document.getElementById('status-text').textContent = 'Finished';
+  }
+}
+debugBtn.addEventListener('click', debugCode);
 
 /* ---------- Download / Upload ---------- */
 function downloadCode() {
