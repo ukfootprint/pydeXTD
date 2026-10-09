@@ -324,6 +324,92 @@ with sync_playwright() as p:
     check("S13. Stop-guard overhead on a tight 1M loop", timing["guarded"] < timing["plain"] * 5,
           f"{timing['plain']:.0f} ms without, {timing['guarded']:.0f} ms with ({timing['guarded'] / timing['plain']:.1f}x)")
 
+    # ---------------- GCSE layer: trace tables ----------------
+    def build_trace(src, inputs=""):
+        set_code(src); page.click("button[data-tab=trace]")
+        if page.is_checked("#trace-practice"): page.uncheck("#trace-practice")
+        page.fill("#trace-inputs", inputs); page.click("#trace-build")
+        page.wait_for_function("!document.getElementById('trace-build').disabled", timeout=20000)
+        return page.evaluate("pydeTrace.data")
+    def table_cells():
+        return page.evaluate("""[...document.querySelectorAll('#trace-table tr')].map(tr =>
+            [...tr.children].map(td => td.querySelector('input') ? '<' + td.querySelector('input').value + '>' : td.textContent))""")
+
+    COUNT = 'count = 0\nnum = int(input("Number: "))\nwhile num != 0:\n    count = count + 1\n    num = int(input("Number: "))\nprint("Count:", count)\n'
+    d = build_trace(COUNT, "5, 3, 0")
+    check("T1. Trace table built from pre-set inputs, exam style",
+          table_cells() == [["Line", "count", "num", "Output"], ["1", "0", "", ""], ["2", "", "5", ""], ["4", "1", "", ""],
+                            ["5", "", "3", ""], ["4", "2", "", ""], ["5", "", "0", ""], ["6", "", "", "Count: 2"]], json.dumps(table_cells()))
+    check("T2. Inputs echoed to the console, buttons re-enabled", "Number: 5" in console() and page.is_enabled("#run-btn") and page.is_enabled("#debug-btn"))
+
+    d = build_trace("def square(n):\n    result = n * n\n    return result\n\nx = 3\ny = square(x)\nprint(y)\n")
+    hdr = page.evaluate("[...document.querySelectorAll('#trace-table th')].map(th => th.textContent)")
+    check("T3. Function parameters on the def line, locals labelled by function",
+          [r["line"] for r in d["rows"]] == [5, 1, 2, 6, 7] and hdr == ["Line", "x", "nin square()", "resultin square()", "y", "Output"], f"{[r['line'] for r in d['rows']]} {hdr}")
+
+    page.uncheck("#trace-lines")
+    page.locator("#trace-cols label", has_text="result").locator("input").uncheck()
+    cells = table_cells()
+    check("T4. Hiding a column (and line numbers) drops rows with nothing left to show",
+          cells[0] == ["x", "nin square()", "y", "Output"] and len(cells) == 5, json.dumps(cells))
+    page.check("#trace-lines")
+
+    d = build_trace('names = []\nfor n in ["Ann", "Bo"]:\n    names.append(n.upper())\nprint(names)\n')
+    check("T5. Strings shown in double quotes, lists too", d["rows"][2]["vals"] == {"names": '["ANN"]'} and d["rows"][1]["vals"] == {"n": '"Ann"'}, json.dumps(d["rows"][:3]))
+
+    # practice mode + marking
+    build_trace(COUNT, "5, 3, 0")
+    page.check("#trace-practice")
+    cells = table_cells()
+    check("T6. Practice mode blanks every answer cell", all(c in ("<>",) for row in cells[1:] for c in row[1:]) and cells[1][0] == "1", json.dumps(cells[:3]))
+    answers = [["0", "", ""], ["", "5", ""], ["1", "", ""], ["", "3", ""], ["2", "", ""], ["", "0", ""], ["", "", "Count: 2"]]
+    def fill(ans):
+        inputs = page.locator("#trace-table tbody input")
+        flat = [v for row in ans for v in row]
+        for k, v in enumerate(flat): inputs.nth(k).fill(v)
+    fill(answers); page.click("#trace-check")
+    check("T7. All-correct answers marked correct", page.inner_text("#trace-status").startswith("All 7 correct"), page.inner_text("#trace-status"))
+    wrong = [r[:] for r in answers]; wrong[2][0] = "2"; wrong[1][2] = "oops"; wrong[3][0] = "1"
+    fill(wrong); page.click("#trace-check")
+    st = page.inner_text("#trace-status")
+    check("T8. Mistakes marked: wrong value red, repeating an unchanged value tolerated, stray output counted",
+          st.startswith("6 / 7 correct") and "1 cell" in st and page.locator("#trace-table td.wrong").count() == 2, st)
+    page.click("#trace-reveal")
+    check("T9. Reveal shows the right answer beside wrong cells", page.locator("#trace-table td.wrong .answer").first.inner_text() == "1")
+
+    build_trace('names = []\nfor n in ["Ann", "Bo"]:\n    names.append(n.upper())\nprint(names)\n')
+    page.check("#trace-practice")
+    fill([["[]", "", ""], ["", "Ann", ""], ["['ANN']", "", ""], ["", "'Bo'", ""], ['[ "ANN","BO" ]', "", ""], ["", "", "['ANN', 'BO']"]])
+    page.click("#trace-check")
+    check("T10. Lenient marking: quotes optional, list spacing/quote style ignored", page.inner_text("#trace-status").startswith("All 6 correct"), page.inner_text("#trace-status"))
+
+    # inputs typed live (JSPI) when none are pre-set
+    set_code('a = input("A? ")\nb = a * 2\n'); page.click("button[data-tab=trace]")
+    page.uncheck("#trace-practice"); page.fill("#trace-inputs", ""); page.click("#trace-build")
+    page.wait_for_selector("#console-output .console-inline-input", timeout=10000)
+    page.fill("#console-output .console-inline-input", "hi"); page.press("#console-output .console-inline-input", "Enter")
+    page.wait_for_function("!document.getElementById('trace-build').disabled", timeout=10000); page.click("button[data-tab=trace]")
+    check("T11. input() with no pre-set inputs asks in the console", table_cells()[2][2:3] == ['"hihi"'], json.dumps(table_cells()))
+
+    build_trace("while True:\n    x = 1\n")
+    check("T12. Infinite loop stops early with a message", "Stopped early" in page.inner_text("#trace-status"))
+    build_trace("a = 10\nb = 0\nprint(a / b)\n")
+    check("T13. Runtime error reported in the table", "ZeroDivisionError" in page.inner_text("#trace-table") and "line 3" in page.inner_text("#trace-status"))
+
+    # copy (blank worksheet version) and share as a task
+    ctx0 = page.context; ctx0.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE.rstrip("/"))
+    build_trace(COUNT, "5, 3, 0"); page.check("#trace-practice"); page.click("#trace-copy"); time.sleep(0.3)
+    tsv = page.evaluate("navigator.clipboard.readText()")
+    check("T14. Copy table gives a blank worksheet table in Practice mode", tsv.splitlines()[0] == "Line\tcount\tnum\tOutput" and tsv.splitlines()[1] == "1\t\t\t", repr(tsv[:80]))
+    page.click("#trace-share"); time.sleep(0.3)
+    link = page.evaluate("navigator.clipboard.readText()")
+    tpage = ctx0.new_page(); tpage.goto(link)
+    tpage.wait_for_function("document.getElementById('trace-table') && document.querySelectorAll('#trace-table tbody input').length > 0", timeout=60000)
+    check("T15. Shared task link opens in Practice mode with code, inputs and a blank table",
+          "#trace=" in link and tpage.is_checked("#trace-practice") and tpage.input_value("#trace-inputs") == "5, 3, 0"
+          and tpage.locator("#trace-table tbody tr").count() == 7 and "num != 0" in tpage.evaluate("document.querySelector('.CodeMirror').CodeMirror.getValue()"))
+    tpage.close()
+
     # ---------------- self-hosting ----------------
     set_code("x=[1,2 ,3]\nif x :print( x )\n"); click("#tidy-btn")
     page.wait_for_function("document.querySelector('.CodeMirror').CodeMirror.getValue().startsWith('x = [1, 2, 3]')", timeout=30000)
@@ -357,6 +443,10 @@ with sync_playwright() as p:
     npage.wait_for_function("!document.getElementById('run-btn').disabled")
     check("N2. No JSPI: Run + inline input via the original AST rewrite, no Stop button",
           "Hi Bo" in npage.inner_text("#console-output") and not stop_shown and not nerrs, npage.inner_text("#console-output") + " ".join(nerrs))
+    npage.evaluate("(s) => document.querySelector('.CodeMirror').CodeMirror.setValue(s)", 'n = int(input())\nprint(n * 2)\n')
+    npage.click("button[data-tab=trace]"); npage.fill("#trace-inputs", "21"); npage.click("#trace-build")
+    npage.wait_for_function("!document.getElementById('trace-build').disabled", timeout=20000)
+    check("N3. No JSPI: trace tables work with pre-set inputs", "42" in npage.inner_text("#trace-table") and not nerrs, " ".join(nerrs))
     npage.context.close()
     b.close()
 
