@@ -153,18 +153,28 @@ print(highName, highScore)
   const isDirty = (f) => f.original && f.doc.getValue() !== f.content;
 
   /* ---------------- persistence ---------------- */
+  function writeStore() {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+    const data = {
+      files: files.map(f => ({ name: f.name, content: f.content, original: f.original,
+                               draft: isDirty(f) ? f.doc.getValue() : undefined })),
+      current: current ? current.name : null,
+    };
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+    catch (e) { showToast('Could not save the workspace in this browser (storage full?). Download your files to keep them.'); }
+  }
+  // Typing is saved after a short pause; anything that creates, replaces or
+  // deletes a file is saved at once, so closing the tab straight after
+  // "Save as" can't lose it. Pending typing is flushed when the page is hidden.
   function persist() {
     clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => {
-      const data = {
-        files: files.map(f => ({ name: f.name, content: f.content, original: f.original,
-                                 draft: isDirty(f) ? f.doc.getValue() : undefined })),
-        current: current ? current.name : null,
-      };
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-      catch (e) { showToast('Could not save the workspace in this browser (storage full?). Download your files to keep them.'); }
-    }, 300);
+    persistTimer = setTimeout(writeStore, 300);
   }
+  function persistNow() { writeStore(); }
+  window.addEventListener('pagehide', () => { if (persistTimer) writeStore(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && persistTimer) writeStore(); });
+
   function restore() {
     let data = null;
     try { data = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { /* ignore */ }
@@ -243,7 +253,7 @@ print(highName, highScore)
     }
     if (changedOriginals.length) showToast('Your program changed ' + changedOriginals.join(', ') + ' – the original is kept unchanged in CODES.');
     if (added) showToast(added + ' file' + (added === 1 ? '' : 's') + ' written by your program added to My files.');
-    if (added || changedOriginals.length) { render(); persist(); }
+    if (added || changedOriginals.length) { render(); persistNow(); }
   }
 
   /* ---------------- Save / Save as ---------------- */
@@ -286,7 +296,7 @@ print(highName, highScore)
         else if (!current) scratchDoc.setValue(scratchDoc.getValue());         // scratch keeps its text
         open(target);
         showToast('Saved as ' + r.name);
-        persist();
+        persistNow();
         finish(true);
       };
       box.querySelector('.ok').onclick = attempt;
@@ -296,7 +306,7 @@ print(highName, highScore)
   }
 
   function save() {
-    if (current && !current.original) { current.content = current.doc.getValue(); persist(); showToast('Saved ' + current.name); return; }
+    if (current && !current.original) { current.content = current.doc.getValue(); persistNow(); showToast('Saved ' + current.name); return; }
     saveAs();
   }
 
@@ -314,7 +324,7 @@ print(highName, highScore)
       } else files.push(makeFile(clean, content, original));
       n++;
     }
-    render(); persist();
+    render(); persistNow();
     if (skipped.length) showToast('Skipped: ' + skipped.join(', '));
     return n;
   }
@@ -362,7 +372,7 @@ _js.dumps(_out)`);
     return JSON.parse(json);
   }
 
-  async function downloadZip() {
+  async function downloadZip(zipName) {
     const mine = files.filter(f => !f.original);
     if (!mine.length) { showToast('Nothing in My files yet – use Save as to save your work.'); return; }
     await waitForPython();
@@ -374,9 +384,10 @@ with _zf.ZipFile("/tmp/_pyde_out.zip", "w", _zf.ZIP_DEFLATED) as _z:
         _z.writestr(_n, _c)`);
     const blob = new Blob([pyodide.FS.readFile('/tmp/_pyde_out.zip')], { type: 'application/zip' });
     try { pyodide.FS.unlink('/tmp/_pyde_out.zip'); } catch (e) { /* ignore */ }
-    const a = el('a', { href: URL.createObjectURL(blob), download: 'my-files.zip' });
+    zipName = typeof zipName === 'string' ? zipName : 'my-files.zip';
+    const a = el('a', { href: URL.createObjectURL(blob), download: zipName });
     document.body.append(a); a.click(); a.remove();
-    showToast('Downloaded my-files.zip (' + mine.length + ' file' + (mine.length === 1 ? '' : 's') + ').');
+    showToast('Downloaded ' + zipName + ' (' + mine.length + ' file' + (mine.length === 1 ? '' : 's') + ').');
   }
 
   function sharePack() {
@@ -399,7 +410,7 @@ with _zf.ZipFile("/tmp/_pyde_out.zip", "w", _zf.ZIP_DEFLATED) as _z:
   function deleteFile(f) {
     files = files.filter(x => x !== f);
     if (current === f) open(null); else render();
-    persist();
+    persistNow();
     showToast('Deleted ' + f.name);
   }
 
@@ -574,5 +585,5 @@ with _zf.ZipFile("/tmp/_pyde_out.zip", "w", _zf.ZIP_DEFLATED) as _z:
   }
 
   start();
-  window.pydeWorkspace = { open: (name) => open(name ? byName(name) : null), saveAs, save, loadPack, get files() { return sortFiles(files.filter(f => f.original)).concat(sortFiles(files.filter(f => !f.original))); }, get current() { return current; }, SAMPLE_PACK };
+  window.pydeWorkspace = { open: (name) => open(name ? byName(name) : null), saveAs, save, loadPack, downloadZip, showSide, isDirty, get files() { return sortFiles(files.filter(f => f.original)).concat(sortFiles(files.filter(f => !f.original))); }, get current() { return current; }, SAMPLE_PACK };
 })();

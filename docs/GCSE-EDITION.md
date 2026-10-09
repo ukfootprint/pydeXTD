@@ -89,6 +89,7 @@ Python, C# or Java may be used. The 4CP0 profile therefore needs:
   construct, with the usual translation traps. *Built:* `gcse/pseudocode.js`.
 - **An exam-conditions mock mode:** a 3-hour timer, aids switched off, saving
   under the given names enforced, and a "collect my files" step at the end.
+  *Built:* `gcse/mock.js`.
 
 The exam itself runs on a centre-prepared PC with a local IDE, not a
 Chromebook. Pupils should rehearse there as well, using the same IDE and
@@ -212,6 +213,8 @@ without changing the tool's no-data design.
 - **Done:** a CODES-folder workspace for 4CP0 Paper 2 practice
   (`gcse/workspace.js`).
 - **Done:** a 4CP0 pseudocode reference (`gcse/pseudocode.js`).
-- Each module is attached to pyde by one `<script>` tag. There are 93
+- **Done:** an exam-conditions mock of the 4CP0 practical paper
+  (`gcse/mock.js`).
+- Each module is attached to pyde by one `<script>` tag. There are 105
   automated checks in total.
 - **Next:** pilot with a GCSE student on a school Chromebook behind Smoothwall.

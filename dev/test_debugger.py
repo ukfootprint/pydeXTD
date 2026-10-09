@@ -9,7 +9,7 @@ jsDelivr URLs from a local npm copy of the same Pyodide release.
     npm install pyodide@0.29.5          # only for the file:// fallback check
     PYDE_NODE_MODULES=path/to/node_modules python dev/test_debugger.py
 """
-import http.server, json, mimetypes, os, socketserver, sys, threading, time
+import http.server, json, mimetypes, os, re, socketserver, sys, threading, time
 from functools import partial
 from playwright.sync_api import sync_playwright
 
@@ -531,6 +531,67 @@ with sync_playwright() as p:
     page.fill("#pc-filter", "")
     page.locator("#tab-pseudo td.py", has_text="random.randint(0, n)").click(); time.sleep(0.3)
     check("P3. Clicking the Python copies it", page.evaluate("navigator.clipboard.readText()") == "import random\nrandom.randint(0, n)")
+
+    # ---------------- GCSE layer: exam-conditions mock ----------------
+    def reload_page():
+        page.reload(); page.wait_for_function("document.getElementById('status-text').textContent === 'Ready'", timeout=60000)
+        if page.is_visible("#about-close"): page.click("#about-close")
+    page.evaluate("localStorage.removeItem('pyde-gcse-workspace')"); reload_page()
+    page.click("#mock-btn")
+    no_pack = page.is_disabled("#mock-go") and "Load a CODES pack" in page.inner_text("#mock-start .err")
+    page.click("#mock-start button:has-text('Cancel')")
+    page.evaluate("pydeWorkspace.loadPack(pydeWorkspace.SAMPLE_PACK, 'practice pack')")
+    page.evaluate("pydeWorkspace.open('Q02.py')"); page.evaluate(f"() => {CM}.replaceRange('# quick\\n', {{line: 0, ch: 0}})")
+    page.keyboard.press("Control+s"); page.fill("#ws-saveas input", "QUICK"); page.click("#ws-saveas .ok"); reload_page()
+    check("M0. A file saved just before the tab is reloaded is not lost", "QUICK.py" in wsfiles(), json.dumps(wsfiles()))
+    li = page.locator("#ws-mine li[data-name='QUICK.py']"); li.hover(); li.locator(".ws-del").click(); li.locator(".ws-del").click()
+    page.evaluate("pydeWorkspace.open('Q02.py')"); page.evaluate(f"() => {CM}.undo()")
+    page.click("#mock-btn")
+    req = page.input_value("#mock-required").split("\n")
+    check("M1. Start needs a CODES pack; required names read from the CODES files; 180 minutes by default",
+          no_pack and req == ["Q01FINISHED.py", "Q02FINISHED.py", "Q03FINISHED.py"] and page.input_value("#mock-minutes") == "180", str(req))
+    page.click("#mock-go"); time.sleep(1.2)
+    hidden = page.evaluate("""['#tidy-btn', '#parsons-btn', '#share-btn', '#upload-btn', 'button[data-tab=trace]', 'button[data-tab=pseudo]', '#ws-load-zip', '#ws-share', '#mock-btn']
+        .every(s => getComputedStyle(document.querySelector(s)).display === 'none')""")
+    clock = page.inner_text("#mock-bar .clock")
+    check("M2. Mock running: countdown shown, aids hidden, Run/Debug/Save as kept",
+          page.is_visible("#mock-bar") and clock.startswith("2:59:5") and hidden and page.is_visible("#run-btn") and page.is_visible("#debug-btn") and page.is_visible("#ws-saveas-btn"), clock)
+    reload_page(); time.sleep(1.2)
+    check("M3. The clock keeps running through a reload", page.evaluate("document.body.classList.contains('mock-on')") and page.inner_text("#mock-bar .clock").startswith("2:59:"), page.inner_text("#mock-bar .clock"))
+    page.evaluate("() => { const st = JSON.parse(localStorage.getItem('pyde-gcse-mock')); st.endAt = Date.now() + 4 * 60000; localStorage.setItem('pyde-gcse-mock', JSON.stringify(st)); }")
+    reload_page(); time.sleep(1.2)
+    check("M4. Under 5 minutes the bar turns urgent", page.get_attribute("#mock-bar", "class") == "urgent" and page.inner_text("#mock-bar .clock").startswith("0:03:"), page.get_attribute("#mock-bar", "class"))
+
+    def save_as(name):
+        page.keyboard.press("Control+s"); page.fill("#ws-saveas input", name); page.click("#ws-saveas .ok")
+    page.evaluate("pydeWorkspace.open('Q01.py')"); page.evaluate(f"() => {CM}.replaceRange('# fixed\\n', {{line: 0, ch: 0}})"); save_as("Q01FINISHED")
+    page.evaluate("pydeWorkspace.open('Q02.py')"); page.evaluate(f"() => {CM}.replaceRange('# done\\n', {{line: 0, ch: 0}})"); save_as("q02finished")
+    page.evaluate("pydeWorkspace.open('Q03.py')"); page.evaluate(f"() => {CM}.replaceRange('# not saved\\n', {{line: 0, ch: 0}})")
+    page.click("#mock-bar button"); page.wait_for_selector("#mock-summary:not(.hidden)", timeout=5000)
+    summ = page.inner_text("#mock-summary .body")
+    check("M5. Finish early: summary checks names - saved, near miss, missing - and flags unsaved edits",
+          "1 of 3 required files" in summ and "You saved q02finished.py" in summ and "No file with this name" in summ and "Unsaved changes in Q03.py" in summ and "You finished early" in summ, summ.replace("\n", " | "))
+    page.click("#mock-summary button:has-text('Close')")
+    page.keyboard.press("Control+s")
+    locked = (page.evaluate(f"{CM}.getOption('readOnly')") == "nocursor" and not page.is_visible("#run-btn") and not page.is_visible("#debug-btn")
+              and page.is_hidden("#ws-saveas") and page.inner_text("#mock-bar .clock") == "Finished")
+    page.evaluate("pydeWorkspace.open('Q01FINISHED.py')")
+    check("M6. After finishing, editing is locked (also after switching file), Run/Debug/Save as gone", locked and page.evaluate(f"{CM}.getOption('readOnly')") == "nocursor",
+          str([page.evaluate(f"{CM}.getOption('readOnly')"), page.is_visible("#run-btn"), page.is_visible("#debug-btn"), page.is_hidden("#ws-saveas"), page.inner_text("#mock-bar .clock")]))
+    reload_page()
+    check("M7. Still locked after a reload, summary reopens", page.is_visible("#mock-summary") and page.evaluate(f"{CM}.getOption('readOnly')") == "nocursor")
+    with page.expect_download() as dl:
+        page.click("#mock-zip")
+    zn = sorted(zipfile.ZipFile(dl.value.path()).namelist())
+    check("M8. Download my files gives a dated mock .zip", re.match(r"mock-\d{4}-\d\d-\d\d\.zip$", dl.value.suggested_filename) is not None and zn == ["Q01FINISHED.py", "q02finished.py"], f"{dl.value.suggested_filename} {zn}")
+    page.click("#mock-end")
+    check("M9. End mock unlocks everything", not page.is_visible("#mock-bar") and page.is_visible("#run-btn") and page.is_visible("button[data-tab=trace]")
+          and page.evaluate(f"{CM}.getOption('readOnly')") is False and page.evaluate("localStorage.getItem('pyde-gcse-mock')") is None)
+    page.evaluate("pydeMock.start({minutes: 0.04, required: ['Q01FINISHED.py']})")
+    page.wait_for_selector("#mock-summary:not(.hidden)", timeout=8000)
+    check("M10. When time runs out the mock finishes by itself", "Time is up" in page.inner_text("#mock-summary .body") and "1 of 1" in page.inner_text("#mock-summary .body"))
+    page.click("#mock-end")
+    check("M11. No uncaught page errors (mock)", not errors, "; ".join(errors[:3]))
 
     # ---------------- self-hosting ----------------
     set_code("x=[1,2 ,3]\nif x :print( x )\n"); click("#tidy-btn")
