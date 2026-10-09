@@ -35,7 +35,7 @@ class _PydeTraceLimit(BaseException):
 def _pyde_trace_fmt(v, depth=0):
     # Like repr(), but strings always in double quotes, as in most mark schemes
     if isinstance(v, str):
-        return '"' + v + '"'
+        return _tjson.dumps(v, ensure_ascii=False)     # double quotes, newlines shown as escapes
     if depth < 3 and type(v) in (list, tuple, set, dict):
         if isinstance(v, dict):
             inner = ", ".join(_pyde_trace_fmt(k, depth + 1) + ": " + _pyde_trace_fmt(x, depth + 1) for k, x in v.items())
@@ -57,7 +57,8 @@ def _pyde_trace_fmt(v, depth=0):
 
 
 class _PydeTraceRecorder:
-    SKIP_TYPES = ("function", "builtin_function_or_method", "module", "type")
+    SKIP_TYPES = ("function", "builtin_function_or_method", "module", "type",
+                  "TextIOWrapper", "BufferedReader", "BufferedWriter", "FileIO")   # file handles
 
     def __init__(self, inputs, max_rows, max_lines):
         self.inputs = list(inputs)

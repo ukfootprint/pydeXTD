@@ -410,6 +410,117 @@ with sync_playwright() as p:
           and tpage.locator("#trace-table tbody tr").count() == 7 and "num != 0" in tpage.evaluate("document.querySelector('.CodeMirror').CodeMirror.getValue()"))
     tpage.close()
 
+    # ---------------- GCSE layer: CODES-folder workspace ----------------
+    import tempfile, zipfile
+    page.on("dialog", lambda d: d.accept())
+    CM = "document.querySelector('.CodeMirror').CodeMirror"
+    wsfiles = lambda: page.evaluate("pydeWorkspace.files.map(f => f.name + (f.original ? '*' : ''))")
+    wscur = lambda: page.evaluate("pydeWorkspace.current && pydeWorkspace.current.name")
+    set_code("print('scratch work')\n")
+    page.click("#ws-toggle"); page.click("#ws-sample")
+    check("W1. Practice pack loads as CODES originals and opens the first question",
+          wsfiles() == ["Q01.py*", "Q02.py*", "Q03.py*", "Q03Data.txt*"] and wscur() == "Q01.py" and page.is_visible("#ws-banner"), f"{wsfiles()} {wscur()}")
+
+    page.evaluate(f"() => {CM}.replaceRange('# my fix\\n', {{line: 0, ch: 0}})")
+    badge = page.locator("#ws-codes li[data-name='Q01.py'] .ws-badge").count()
+    page.keyboard.press("Control+s")
+    prefill = page.input_value("#ws-saveas input")
+    page.fill("#ws-saveas input", "Q01.py"); page.click("#ws-saveas .ok")
+    refused = "must not overwrite" in page.inner_text("#ws-saveas .err")
+    page.fill("#ws-saveas input", "Q01FINISHED"); page.click("#ws-saveas .ok")
+    orig_text = page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q01.py').doc.getValue()")
+    check("W2. Edited original: badge, Save as starts from its name, refuses to overwrite, adds .py, original untouched",
+          badge == 1 and prefill == "Q01.py" and refused and wscur() == "Q01FINISHED.py" and "Q01FINISHED.py" in wsfiles()
+          and not orig_text.startswith("# my fix") and page.evaluate(f"{CM}.getValue()").startswith("# my fix"), f"{badge} {prefill} {refused} {wscur()}")
+
+    page.click("#ws-codes li[data-name='Q03.py']")
+    page.evaluate(f"""() => {{ const cm = {CM}; cm.setValue(cm.getValue().replace("    # Add your code here\\n    pass",
+        "    name, score = line.strip().split(',')\\n    if int(score) > highScore:\\n        highName = name\\n        highScore = int(score)")); }}""")
+    page.keyboard.press("Control+s"); page.fill("#ws-saveas input", "Q03FINISHED.py"); page.click("#ws-saveas .ok")
+    click("#run-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled")
+    check("W3. Run reads the CODES data file", console().strip() == "Dara 91", console())
+
+    page.click("#ws-scratch")
+    scratch_ok = page.evaluate(f"{CM}.getValue()") == "print('scratch work')\n"
+    set_code('with open("Q03Data.txt") as f:\n    n = len(f.readlines())\nwith open("report.txt", "w") as out:\n    out.write(str(n) + " students")\n')
+    click("#run-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled")
+    rep = page.evaluate("(pydeWorkspace.files.find(f => f.name === 'report.txt') || {}).content")
+    check("W4. Scratch program kept separate; files a program writes appear in My files", scratch_ok and rep == "5 students", f"{scratch_ok} {rep!r}")
+
+    page.click("#ws-mine li[data-name='Q03FINISHED.py']")
+    click("#debug-btn"); paused_line(); click("#dbg-continue"); wait_status("document.getElementById('status-text').textContent === 'Finished'")
+    dbg_ok = "Dara 91" in console()
+    page.click("button[data-tab=trace]"); page.fill("#trace-inputs", ""); page.click("#trace-build")
+    page.wait_for_function("!document.getElementById('trace-build').disabled", timeout=20000)
+    tdata = page.evaluate("pydeTrace.data")
+    check("W5. Debug and Trace table work on a workspace file with its data file (file handles left out, escapes shown)",
+          dbg_ok and any(r["vals"].get("highName") == '"Dara"' for r in tdata["rows"]) and "theFile" not in [c["key"] for c in tdata["cols"]]
+          and any(r["vals"].get("line") == '"Amira,67\\n"' for r in tdata["rows"]), json.dumps(tdata["rows"][:4]))
+
+    page.click("#ws-codes li[data-name='Q03Data.txt']"); clearConsole = page.evaluate("clearConsole()")
+    page.click("#run-btn"); time.sleep(0.3)
+    check("W6. Run on a data file is blocked with a message", console().strip() == "" and "data file" in page.inner_text("#toast"))
+
+    page.click("#ws-mine li[data-name='Q03FINISHED.py']")
+    before_new = page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q03FINISHED.py').content")
+    page.click("#new-btn")
+    check("W7. New starts a blank scratch program without touching workspace files",
+          wscur() is None and page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q03FINISHED.py').content") == before_new)
+
+    page.click("#ws-codes li[data-name='Q02.py']")
+    page.evaluate(f"() => {CM}.replaceRange('# unsaved\\n', {{line: 0, ch: 0}})")
+    set_scratch = page.evaluate("pydeWorkspace.open(null)")
+    set_code("print('scratch after reload')\n"); time.sleep(1.5)
+    page.reload(); page.wait_for_function("document.getElementById('status-text').textContent === 'Ready'", timeout=60000)
+    if page.is_visible("#about-close"): page.click("#about-close")
+    q2 = page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q02.py')")
+    check("W8. Workspace survives a reload; scratch draft is still the scratch program; unsaved edits to an original kept and flagged",
+          wsfiles() == ["Q01.py*", "Q02.py*", "Q03.py*", "Q03Data.txt*", "Q01FINISHED.py", "Q03FINISHED.py", "report.txt"]
+          and page.evaluate(f"{CM}.getValue()") == "print('scratch after reload')\n"
+          and page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q02.py').doc.getValue()").startswith("# unsaved")
+          and page.locator("#ws-codes li[data-name='Q02.py'] .ws-badge").count() == 1, json.dumps(wsfiles()))
+
+    with page.expect_download() as dl:
+        page.click("#ws-download")
+    zpath = dl.value.path()
+    names = sorted(zipfile.ZipFile(zpath).namelist())
+    check("W9. My files download as a .zip", dl.value.suggested_filename == "my-files.zip" and names == ["Q01FINISHED.py", "Q03FINISHED.py", "report.txt"], str(names))
+
+    tmp = tempfile.mkdtemp()
+    with zipfile.ZipFile(os.path.join(tmp, "pack.zip"), "w") as z:
+        z.writestr("CODES/Q10.py", "print(open('Q10Data.txt').read().upper())\n"); z.writestr("CODES/Q10Data.txt", "hello\n"); z.writestr("__MACOSX/._Q10.py", "x")
+    page.set_input_files("#ws-zip-input", os.path.join(tmp, "pack.zip"))
+    page.wait_for_function("pydeWorkspace.files.some(f => f.name === 'Q10.py')", timeout=15000)
+    click("#run-btn"); page.wait_for_function("!document.getElementById('run-btn').disabled")
+    check("W10. A CODES .zip replaces the originals (My files kept), folders flattened, junk skipped, and runs",
+          wsfiles() == ["Q10.py*", "Q10Data.txt*", "Q01FINISHED.py", "Q03FINISHED.py", "report.txt"] and wscur() == "Q10.py" and "HELLO" in console(), json.dumps(wsfiles()))
+
+    fdir = os.path.join(tmp, "CODES"); os.makedirs(fdir)
+    open(os.path.join(fdir, "Q20.py"), "w").write("print(20)\n"); open(os.path.join(fdir, "Q20Data.csv"), "w").write("a,b\n")
+    page.set_input_files("#ws-folder-input", fdir)
+    page.wait_for_function("pydeWorkspace.files.some(f => f.name === 'Q20.py')", timeout=15000)
+    check("W11. Open CODES folder loads a whole folder", "Q20.py*" in wsfiles() and "Q20Data.csv*" in wsfiles() and "Q10.py*" not in wsfiles(), json.dumps(wsfiles()))
+
+    open(os.path.join(tmp, "Q20.py"), "w").write("hacked\n"); open(os.path.join(tmp, "mine.py"), "w").write("print('mine')\n")
+    page.set_input_files("#ws-add-input", [os.path.join(tmp, "Q20.py"), os.path.join(tmp, "mine.py")])
+    page.wait_for_function("pydeWorkspace.files.some(f => f.name === 'mine.py')", timeout=15000)
+    check("W12. Add files goes to My files and can't replace an original",
+          "mine.py" in wsfiles() and page.evaluate("pydeWorkspace.files.find(f => f.name === 'Q20.py').content") == "print(20)\n")
+
+    li = page.locator("#ws-mine li[data-name='mine.py']"); li.hover(); li.locator(".ws-del").click(); li.locator(".ws-del").click()
+    check("W13. Deleting a file needs a second click", "mine.py" not in wsfiles())
+
+    page.click("#ws-share"); time.sleep(0.3)
+    link = page.evaluate("navigator.clipboard.readText()")
+    spage = page.context.browser.new_context(viewport={"width": 1366, "height": 768})
+    spage.route("**/*", route_one_host)
+    sp = spage.new_page(); sp.goto(link)
+    sp.wait_for_function("window.pydeWorkspace && pydeWorkspace.files.length > 0", timeout=60000)
+    check("W14. Share pack link opens the CODES files on another device",
+          sp.evaluate("pydeWorkspace.files.map(f => f.name + (f.original ? '*' : ''))") == ["Q20.py*", "Q20Data.csv*"] and sp.is_visible("#ws-side"))
+    spage.close()
+    check("W15. No uncaught page errors (workspace)", not errors, "; ".join(errors[:3]))
+
     # ---------------- self-hosting ----------------
     set_code("x=[1,2 ,3]\nif x :print( x )\n"); click("#tidy-btn")
     page.wait_for_function("document.querySelector('.CodeMirror').CodeMirror.getValue().startsWith('x = [1, 2, 3]')", timeout=30000)

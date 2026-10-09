@@ -73,7 +73,26 @@ best browser alternative. The fork
 | **Trace tables + practice mode** | Built from the debugger's steps: line, one column per variable (a value appears only when it changes), output. In practice mode the cells are blank and the pupil fills them in; each cell is then marked. Shareable as a link. | Every board's papers include "complete the trace table". This turns the debugger into exam practice. |
 | **Shell after Run** | A `>>>` prompt in the finished program's namespace; the variables panel stays visible | pyde's biggest gap compared with Thonny |
 | **Friendly error notes** | Plain-English notes beside the traceback for the 15–20 errors that cause most GCSE failures. Examples: str + int after `input()`; a `NameError` from a typo, with a "did you mean…?" hint; `IndexError` off-by-one; `int("abc")`; `=` versus `==`. | This is where most beginners get stuck |
-| **Exam-board profiles** | **Edexcel:** checks code against the published Programming Language Subset and offers an "exam conditions" mode, since Paper 2 is an onscreen Python exam. **OCR:** an Exam Reference Language panel beside the code. **AQA:** pseudo-code shown beside the code. | Practice in the board's own language and conditions |
+| **Exam-board profiles** | **Edexcel GCSE (1CP2):** checks code against the published Programming Language Subset, with an "exam conditions" mode (Paper 2 is an onscreen Python exam). **Edexcel International GCSE (4CP0):** see below. **OCR:** an Exam Reference Language panel beside the code. **AQA:** pseudo-code shown beside the code. | Practice in the board's own language and conditions |
+
+### Edexcel International GCSE (4CP0)
+
+Paper 2 is a three-hour practical exam on a workstation with a code editor
+and interpreter and no internet. Candidates get a **CODES folder** of code and
+data files. They must not overwrite the originals, and they save each answer
+under the name the question gives. A pseudocode command set is provided.
+Python, C# or Java may be used. The 4CP0 profile therefore needs:
+
+- **A CODES-folder workspace.** *Built:* `gcse/workspace.js`; see
+  `gcse/README.md`.
+- **A pseudocode command set panel** showing the Python equivalent of each
+  construct.
+- **An exam-conditions mock mode:** a 3-hour timer, aids switched off, saving
+  under the given names enforced, and a "collect my files" step at the end.
+
+The exam itself runs on a centre-prepared PC with a local IDE, not a
+Chromebook. Pupils should rehearse there as well, using the same IDE and
+folder layout.
 
 ### Tier 2 (next term)
 
@@ -189,6 +208,9 @@ without changing the tool's no-data design.
 - **Done in the fork:** debugger, Stop for Run, self-hosting. 59 automated
   checks in headless Chromium.
 - **Done:** trace tables with practice mode, marking, copy-to-worksheet and
-  shareable task links. Built as a standalone `gcse/trace.js`, attached to
-  pyde by one `<script>` tag. 75 automated checks in total.
+  shareable task links (`gcse/trace.js`).
+- **Done:** a CODES-folder workspace for 4CP0 Paper 2 practice
+  (`gcse/workspace.js`).
+- Each module is attached to pyde by one `<script>` tag. There are 90
+  automated checks in total.
 - **Next:** pilot with a GCSE student on a school Chromebook behind Smoothwall.
