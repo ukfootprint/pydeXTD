@@ -521,6 +521,17 @@ with sync_playwright() as p:
     spage.close()
     check("W15. No uncaught page errors (workspace)", not errors, "; ".join(errors[:3]))
 
+    # ---------------- GCSE layer: pseudocode reference ----------------
+    page.click("button[data-tab=pseudo]")
+    nrows = page.locator("#tab-pseudo tr[data-search]").count()
+    check("P1. Pseudocode tab lists the 4CP0 constructs by section", page.is_visible("#tab-pseudo") and nrows >= 30 and page.locator("#tab-pseudo .pc-sec").count() == 9, str(nrows))
+    page.fill("#pc-filter", "repeat")
+    shown = page.evaluate("[...document.querySelectorAll('#tab-pseudo tr[data-search]')].filter(tr => tr.style.display !== 'none').map(tr => tr.children[0].textContent.split('\\n')[0])")
+    check("P2. Filter narrows to matching constructs", shown == ["REPEAT", "REPEAT <expression> TIMES"], json.dumps(shown))
+    page.fill("#pc-filter", "")
+    page.locator("#tab-pseudo td.py", has_text="random.randint(0, n)").click(); time.sleep(0.3)
+    check("P3. Clicking the Python copies it", page.evaluate("navigator.clipboard.readText()") == "import random\nrandom.randint(0, n)")
+
     # ---------------- self-hosting ----------------
     set_code("x=[1,2 ,3]\nif x :print( x )\n"); click("#tidy-btn")
     page.wait_for_function("document.querySelector('.CodeMirror').CodeMirror.getValue().startsWith('x = [1, 2, 3]')", timeout=30000)

@@ -87,3 +87,28 @@ papers.
 including unsaved edits to originals, which survive a reload. **My files
 .zip** downloads the pupil's files for handing in or backing up. As with the
 rest of pyde, nothing is sent to a server.
+
+## Pseudocode reference (`pseudocode.js`)
+
+The **Pseudocode** tab pairs each construct in Pearson's Edexcel International
+GCSE (4CP0) pseudocode command set with its Python equivalent. A **Watch out
+for** column lists the points where a word-for-word translation goes wrong:
+
+- `FOR … FROM 1 TO 10` includes 10, so it is `range(1, 11)`;
+- `RANDOM(n)` includes `n`, as `randint(0, n)` does;
+- `=` is `==`, `<>` is `!=` and `^` is `**` (in Python `^` is XOR, with no
+  error to warn you);
+- `DIV` is `//` and `MOD` is `%`;
+- `/` is always a float in Python;
+- `&` converts numbers to text, but `+` doesn't;
+- `REPEAT … UNTIL` becomes `while True` with a `break`;
+- `RECEIVE … (INTEGER)` needs `int(input())`.
+
+There is a find box at the top of the tab, and clicking any Python example
+copies it.
+
+**Copyright.** Only the short syntax templates (the pseudocode itself) are
+taken from Pearson's booklet. All the explanations and examples are original.
+The booklet itself is © Pearson and is not included in this repository.
+Pupils get a copy with the exam paper, and the panel links to Pearson's 4CP0
+page.

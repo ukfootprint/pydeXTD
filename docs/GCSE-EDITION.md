@@ -86,7 +86,7 @@ Python, C# or Java may be used. The 4CP0 profile therefore needs:
 - **A CODES-folder workspace.** *Built:* `gcse/workspace.js`; see
   `gcse/README.md`.
 - **A pseudocode command set panel** showing the Python equivalent of each
-  construct.
+  construct, with the usual translation traps. *Built:* `gcse/pseudocode.js`.
 - **An exam-conditions mock mode:** a 3-hour timer, aids switched off, saving
   under the given names enforced, and a "collect my files" step at the end.
 
@@ -211,6 +211,7 @@ without changing the tool's no-data design.
   shareable task links (`gcse/trace.js`).
 - **Done:** a CODES-folder workspace for 4CP0 Paper 2 practice
   (`gcse/workspace.js`).
-- Each module is attached to pyde by one `<script>` tag. There are 90
+- **Done:** a 4CP0 pseudocode reference (`gcse/pseudocode.js`).
+- Each module is attached to pyde by one `<script>` tag. There are 93
   automated checks in total.
 - **Next:** pilot with a GCSE student on a school Chromebook behind Smoothwall.
