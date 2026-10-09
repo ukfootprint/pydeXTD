@@ -6,7 +6,7 @@ Built for teaching (GCSE/A Level CS style exercises), but useful for any quick "
 
 ## Features
 
-- **Run Python** — full CPython 3.12, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
+- **Run Python** — full CPython 3.13, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
 - **New** — a clearly-labelled way to start a blank program, distinct from just deleting everything in the editor (which reads as normal practice to a pupil watching, when the point is to save the old one and start a deliberate new one).
 - **Syntax highlighting** — [CodeMirror 5](https://codemirror.net/5/) with a Python mode and a dark (Dracula) / light (Eclipse) theme toggle. Copying a selection also writes a colour-highlighted `text/html` version to the clipboard alongside the plain text, matching the current theme, so pasting into Word/OneNote/Google Docs keeps the syntax colours instead of landing as flat text.
 - **Multi-cursor editing** — select a word and press `Cmd-D` / `Ctrl-D` to select the next occurrence, VS Code / Sublime style.

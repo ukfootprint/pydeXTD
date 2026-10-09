@@ -10,7 +10,7 @@ Everything lives in one HTML file on purpose — no build step, no `node_modules
 
 ## Stack
 
-- **[Pyodide](https://pyodide.org)** — CPython 3.12 compiled to WebAssembly, loaded from jsDelivr. This is what actually runs your Python, in-tab, no server round-trip.
+- **[Pyodide](https://pyodide.org)** — CPython 3.13 compiled to WebAssembly, loaded from jsDelivr. This is what actually runs your Python, in-tab, no server round-trip.
 - **[CodeMirror 5](https://codemirror.net/5/)** — the editor, with the Python mode, Dracula theme, and the `matchbrackets`/`closebrackets`/`searchcursor` addons (the last one powers the multi-cursor "select next occurrence" command).
 - **[lz-string](https://pieroxy.net/blog/pages/lz-string/index.html)** — compresses code into the URL hash for the Share features.
 - **[p5.js](https://p5js.org)** — loaded lazily from CDN only when a sketch is detected, so it doesn't cost anything for programs that don't use it.
