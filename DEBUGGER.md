@@ -91,18 +91,39 @@ slowdown only applies under Debug; Run is unchanged.
 
 ## Tests
 
-`dev/test_debugger.py` is an end-to-end Playwright suite. It has 36 checks:
+`dev/test_debugger.py` is an end-to-end Playwright suite. It has 59 checks. The page is served over HTTP with every other host blocked, which proves that one host is enough. The suite also checks the `file://` fallback and runs with JSPI removed to simulate Safari and Firefox. Coverage includes
 existing Run, input, turtle and file features on the new Pyodide, plus
 stepping, breakpoints, the variables and stack panel, return values, changed-value
 highlighting, `input()`, Stop in each state, errors, turtle under the debugger,
 and keyboard shortcuts. Setup instructions are in the file's docstring.
 
+## Stop for Run
+
+Run uses a much lighter version of the same idea. A `sys.monitoring` hook on
+`JUMP` (every loop iteration) and `PY_START` (every function call) events, for
+the pupil's code only, hands control back to the browser via `run_sync()` about
+every 50 ms. That lets the Stop button and Shift+F5 interrupt the program. It
+costs about 2–3x on a tight loop, compared with roughly 25x for `sys.settrace`.
+
+When Stop is pressed, the hook raises `PydeStopped` (an ordinary `Exception`)
+at every event, so it lands outside any `try` block. If the program keeps
+swallowing it for half a second (for example with `except Exception:`), the
+hook escalates to `KeyboardInterrupt`.
+
+The pupil's code is run with the filename `<program>`, so the hook ignores
+pyde's own `runPython()` calls. While a program is running:
+
+- `input()` waits on the inline console box through `run_sync()`.
+- `time.sleep()` waits in slices of up to 100 ms through `run_sync()`, so the
+  page never freezes and Stop works during long sleeps.
+
+Without JSPI, Run falls back to the original behaviour: the AST generator
+rewrite for `input()`, and no Stop button.
+
 ## Not done yet
 
-- **Stop for Run.** The same periodic `run_sync` yield could give normal
-  runs a Stop button. Measure the overhead first.
-- **Simpler input() on JSPI browsers.** Normal Run could use `run_sync` for
-  `input()` there, and keep the AST generator rewrite only as the fallback.
-- **p5 sketches in the debugger.**
-- **Expression-level stepping** (Thonny's sub-expression evaluation). This
-  would be a much bigger job.
+- **p5 sketches in the debugger.** The `draw()` loop also can't be stopped
+  yet: p5 calls it synchronously from JS.
+- **Expression-level stepping** (Thonny's sub-expression evaluation).
+- See the roadmap in the project notes: trace tables, Shell after a run,
+  friendly error explanations.

@@ -1,10 +1,16 @@
 <title>Python IDE</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+<!-- All libraries are served from vendor/ so a school web filter only needs to
+     allow this one site - see vendor/README.md. -->
+<style>
+  @font-face{ font-family:'Fira Code'; font-style:normal; font-weight:400; font-display:swap; src:url(vendor/fonts/fira-code/fira-code-latin-400-normal.woff2) format('woff2'); }
+  @font-face{ font-family:'Fira Code'; font-style:normal; font-weight:500; font-display:swap; src:url(vendor/fonts/fira-code/fira-code-latin-500-normal.woff2) format('woff2'); }
+  @font-face{ font-family:'Fira Code'; font-style:normal; font-weight:600; font-display:swap; src:url(vendor/fonts/fira-code/fira-code-latin-600-normal.woff2) format('woff2'); }
+</style>
+<link rel="stylesheet" href="vendor/codemirror/5.65.16/lib/codemirror.css">
+<link rel="stylesheet" href="vendor/codemirror/5.65.16/theme/dracula.css">
+<link rel="stylesheet" href="vendor/codemirror/5.65.16/theme/eclipse.css">
 <style>
   :root{
     --bg:#282a36; --current-line:#44475a; --fg:#f8f8f2; --comment:#6272a4;
@@ -219,7 +225,8 @@
 
 <header class="toolbar">
   <h1>&#128013; Python IDE</h1>
-  <button id="run-btn" disabled title="If a program hangs (e.g. an infinite loop or a long time.sleep), this tab will freeze — reload the page to recover.">&#9654; Run</button>
+  <button id="run-btn" disabled title="Run the program (F5)">&#9654; Run</button>
+  <button id="run-stop-btn" class="stop-btn hidden" title="Stop the program (Shift+F5)">&#9632; Stop</button>
   <button id="debug-btn" class="debug-btn" disabled title="Debug: run your program one line at a time (Ctrl+F5). Click in the margin left of a line number to set a breakpoint.">&#128027; Debug</button>
   <span id="debug-controls" class="debug-controls hidden">
     <button id="dbg-into" title="Step into (F7): run the next line, going inside any function it calls">&#8615; Into</button>
@@ -251,7 +258,7 @@
     <h2>About this page</h2>
     <p>Everything here runs entirely in <strong>your own browser</strong> &mdash; Python is executed locally via WebAssembly, and nothing you write or run is ever uploaded to or executed on a server.</p>
     <p>Share links work the same way: the code is packed into the link itself (after the <code>#</code>), which browsers never send to the server. So a shared link doesn't put anything on our infrastructure &mdash; but it does mean a link can carry <em>any</em> program. Please don't run code from a shared link you don't trust: while your tab is open, that code can still change what's on this page.</p>
-    <p>Because Python runs on this same tab, a program with an infinite loop (or a very long <code>time.sleep</code>) will freeze the page completely when you click <strong>Run</strong>. If that happens, reload the tab to recover. Programs started with <strong>Debug</strong> can always be stopped with the Stop button.</p>
+    <p>In Chrome or Edge (including Chromebooks) a running program can always be stopped with the <strong>Stop</strong> button, even an infinite loop. In other browsers, a program with an infinite loop (or a very long <code>time.sleep</code>) will freeze the page; reload the tab to recover.</p>
     <p><strong>Debug</strong> runs your program one line at a time and shows the variables as they change. Click in the margin next to a line number to set a breakpoint. Keys: Ctrl+F5 debug, F7 step into, F6 step over, F8 continue, Shift+F5 stop. Needs Chrome or Edge 137 or later (Chromebooks included).</p>
     <p>Source, licence, and details of how this was built: <a href="https://github.com/milesberry/pyde" target="_blank" rel="noopener">github.com/milesberry/pyde</a>.</p>
     <button id="about-close">Got it</button>
@@ -369,15 +376,15 @@ print("Hello, world!")
   ensureStorage('localStorage');
 })();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="vendor/codemirror/5.65.16/lib/codemirror.js"></script>
+<script src="vendor/codemirror/5.65.16/mode/python/python.js"></script>
+<script src="vendor/codemirror/5.65.16/addon/edit/matchbrackets.js"></script>
+<script src="vendor/codemirror/5.65.16/addon/edit/closebrackets.js"></script>
+<script src="vendor/codemirror/5.65.16/addon/search/searchcursor.js"></script>
+<script src="vendor/lz-string/1.5.0/lz-string.min.js"></script>
 <!-- 0.29.x (not 0.26) is needed for the debugger: run_sync() stack switching
      via JSPI only works with Chrome 137+ from Pyodide 0.27.7 onwards. -->
-<script src="https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js"></script>
+<script src="vendor/pyodide/0.29.5/pyodide.js"></script>
 
 <script>
 /* ---------- Python shim source: canvas-backed turtle module ---------- */
@@ -1534,7 +1541,12 @@ let isRunning = false;
 const runBtn = document.getElementById('run-btn');
 
 async function initPyodide() {
-  pyodide = await loadPyodide();
+  // Served from vendor/ (one host for the school filter to allow). A page opened
+  // straight from disk can't fetch() the wasm/stdlib over file://, so in that
+  // case only, fall back to the same Pyodide release on jsDelivr.
+  const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.29.5/full/';
+  const indexURL = location.protocol === 'file:' ? PYODIDE_CDN : new URL('vendor/pyodide/0.29.5/', location.href).href;
+  pyodide = await loadPyodide({ indexURL });
   pyodide.setStdout({ batched: (msg) => appendConsole(msg, 'stdout') });
   pyodide.setStderr({ batched: (msg) => appendConsole(msg, 'stderr') });
   pyodide.setStdin({ stdin: () => (window.prompt('Input:') || '') + '\n' });
@@ -1542,6 +1554,7 @@ async function initPyodide() {
   await pyodide.runPythonAsync(INPUT_OVERRIDE_SRC);
   await pyodide.runPythonAsync(INPUT_GENERATOR_SRC);
   await pyodide.runPythonAsync(DEBUGGER_SRC);
+  if (jspiSupported) await pyodide.runPythonAsync(RUN_GUARD_SRC);
   pyodideReady = true;
   document.getElementById('status-dot').classList.add('ready');
   document.getElementById('status-text').textContent = 'Ready';
@@ -1576,7 +1589,7 @@ function loadP5Library() {
   if (p5LoadPromise) return p5LoadPromise;
   p5LoadPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js';
+    s.src = 'vendor/p5/1.9.4/p5.min.js';
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
@@ -1690,9 +1703,18 @@ function diffAndListFiles(before) {
 let autopep8Module = null;
 async function ensureAutopep8() {
   if (autopep8Module) return autopep8Module;
-  await pyodide.loadPackage('micropip');
-  const micropip = pyodide.pyimport('micropip');
-  await micropip.install('autopep8');
+  if (location.protocol === 'file:') {
+    // fetch() can't read local files from a file:// page - use PyPI instead.
+    await pyodide.loadPackage('micropip');
+    await pyodide.pyimport('micropip').install('autopep8');
+  } else
+  // Unpack the vendored pure-Python wheels straight into site-packages: no
+  // micropip, and no requests to PyPI (often blocked by school filters).
+  for (const whl of ['pycodestyle-2.15.0-py2.py3-none-any.whl', 'autopep8-2.3.2-py2.py3-none-any.whl']) {
+    const resp = await fetch(new URL('vendor/wheels/' + whl, location.href));
+    if (!resp.ok) throw new Error('could not load ' + whl);
+    pyodide.unpackArchive(await resp.arrayBuffer(), 'wheel');
+  }
   autopep8Module = pyodide.pyimport('autopep8');
   return autopep8Module;
 }
@@ -1729,7 +1751,12 @@ async function runCode() {
   if (!pyodideReady || isRunning) return;
   isRunning = true;
   runBtn.disabled = true;
+  debugBtn.disabled = true;
+  const canStop = jspiSupported;
+  if (canStop) runStopBtn.classList.remove('hidden');
+  let stopped = false;
   clearConsole();
+  document.getElementById('status-text').textContent = 'Running';
 
   const code = editor.getValue();
   const isTurtle = /\bimport\s+turtle\b|\bfrom\s+turtle\s+import\b/.test(code);
@@ -1764,15 +1791,28 @@ async function runCode() {
 
     try {
       let handledInline = false;
-      if (!isTurtle && !isP5) {
+      if (!isTurtle && !isP5 && !canStop) {
+        // Browsers without JSPI: rewrite input() into generator yields instead.
         handledInline = await tryRunWithInlineInput(code);
       }
       if (!handledInline) {
-        await pyodide.runPythonAsync(code);
+        if (canStop) pyodide.runPython('_pyde_run_guard.start()');
+        try {
+          // Named "<program>" so the stop hook can tell the pupil's code apart
+          // from pyde's own runPython("<exec>") calls.
+          await pyodide.runPythonAsync(code, canStop ? { filename: '<program>' } : undefined);
+        } finally {
+          if (canStop) pyodide.runPython('_pyde_run_guard.finish()');
+        }
         if (isP5) createP5Instance(p5Container);
       }
     } catch (err) {
-      appendConsole(String(err.message || err), 'stderr');
+      if (err && (err.type === 'PydeStopped' || err.type === 'KeyboardInterrupt')) {
+        stopped = true;
+        appendConsole('[Program stopped]', 'stderr');
+      } else {
+        appendConsole(String(err.message || err), 'stderr');
+      }
       switchTab('console');
     }
 
@@ -1780,8 +1820,134 @@ async function runCode() {
   } finally {
     isRunning = false;
     runBtn.disabled = false;
+    debugBtn.disabled = !jspiSupported;
+    runStopBtn.classList.add('hidden');
+    document.getElementById('status-text').textContent = stopped ? 'Stopped' : 'Ready';
   }
 }
+
+/* ---------- Stop for Run ----------
+   On browsers with JSPI (Chrome/Edge 137+, ChromeOS), a sys.monitoring hook
+   counts backward jumps (every loop iteration) and function entries in the
+   pupil's code. Roughly every 50 ms of running it briefly hands control back
+   to the browser via run_sync(), so the page stays responsive and the Stop
+   button gets a chance to set a flag, which the hook turns into a
+   PydeStopped exception in the pupil's code. Costs roughly 2-3x on tight loops, unlike sys.settrace
+   (~25x), so it's always on for Run. input() and time.sleep() also become
+   run_sync() waits, so they don't freeze the tab either. */
+const runStopBtn = document.getElementById('run-stop-btn');
+function stopRun() {
+  if (!isRunning || isDebugging) return;
+  pyodide.runPython('_pyde_run_guard.request_stop()');
+  const pendingInput = document.querySelector('#console-output .console-inline-input');
+  if (pendingInput) {
+    pendingInput.value = '';
+    pendingInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+  }
+  document.getElementById('status-text').textContent = 'Stopping';
+}
+runStopBtn.addEventListener('click', stopRun);
+window._pydeYield = () => new Promise(resolve => setTimeout(resolve, 0));
+window._pydeSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+window._pydeRunInput = (promptText) => requestInlineInput(promptText);
+
+const RUN_GUARD_SRC = `
+import sys as _sys, time as _time, builtins as _builtins
+import js as _js
+from pyodide.ffi import run_sync as _run_sync, can_run_sync as _can_run_sync
+
+class _PydeRunGuard:
+    TOOL = 4            # a sys.monitoring tool id not used by debuggers/profilers
+    CHECK_EVERY = 500   # events between clock checks
+    YIELD_AFTER = 0.05  # seconds of running between hand-backs to the browser
+
+    def __init__(self):
+        self.active = False
+        self.stop = False
+        self.stop_time = 0.0
+        self.count = 0
+        self.last_yield = 0.0
+
+    def _event(self, code, *_):
+        if code.co_filename != "<program>":
+            return _sys.monitoring.DISABLE     # never slow down library code or pyde itself
+        self.count += 1
+        if self.count < self.CHECK_EVERY and not self.stop:
+            return
+        self.count = 0
+        if _time.monotonic() - self.last_yield > self.YIELD_AFTER:
+            _run_sync(_js._pydeYield())        # keep the page alive, even while stopping
+            self.last_yield = _time.monotonic()
+        if self.stop:
+            # Once stopped, raise at every event so it lands outside any try
+            # block. If the program keeps swallowing it (except Exception:)
+            # escalate to KeyboardInterrupt, which only a bare except catches.
+            if _time.monotonic() - self.stop_time > 0.5:
+                raise KeyboardInterrupt
+            raise PydeStopped
+
+    def start(self):
+        self.active, self.stop, self.count = True, False, 0
+        self.last_yield = _time.monotonic()
+        M = _sys.monitoring
+        if M.get_tool(self.TOOL) is not None:   # left over from an interrupted run
+            M.set_events(self.TOOL, 0)
+            M.free_tool_id(self.TOOL)
+        M.use_tool_id(self.TOOL, "pyde-run")
+        M.register_callback(self.TOOL, M.events.JUMP, self._event)
+        M.register_callback(self.TOOL, M.events.PY_START, self._event)
+        M.set_events(self.TOOL, M.events.JUMP | M.events.PY_START)
+        _builtins.input = _pyde_run_input
+
+    def finish(self):
+        M = _sys.monitoring
+        M.set_events(self.TOOL, 0)
+        M.register_callback(self.TOOL, M.events.JUMP, None)
+        M.register_callback(self.TOOL, M.events.PY_START, None)
+        M.free_tool_id(self.TOOL)
+        self.active = False
+        # p5 draw() etc. run later from JS without stack switching
+        _builtins.input = _ide_input
+
+    def request_stop(self):
+        self.stop_time = _time.monotonic()
+        self.stop = True
+
+
+_pyde_run_guard = _PydeRunGuard()
+
+def _pyde_stop_requested():
+    dbg = globals().get("_pyde_debugger")
+    return _pyde_run_guard.stop or (dbg is not None and dbg.stop_requested)
+
+def _pyde_run_input(prompt=""):
+    if not _can_run_sync():
+        return _ide_input(prompt)
+    value = str(_run_sync(_js._pydeRunInput(str(prompt))))
+    if _pyde_stop_requested():
+        raise PydeStopped
+    return value
+
+_pyde_real_sleep = _time.sleep
+
+def _pyde_sleep(secs):
+    # Wait without freezing the tab, in small slices so Stop is responsive.
+    if not _can_run_sync():
+        return _pyde_real_sleep(secs)
+    secs = float(secs)
+    if secs < 0:
+        raise ValueError("sleep length must be non-negative")
+    end = _time.monotonic() + secs
+    while True:
+        left = end - _time.monotonic()
+        if left <= 0:
+            break
+        _run_sync(_js._pydeSleep(min(left, 0.1) * 1000))
+        if _pyde_stop_requested():
+            raise PydeStopped
+
+_time.sleep = _pyde_sleep
+`;
 runBtn.addEventListener('click', runCode);
 
 /* ---------- Debugger ----------
@@ -1803,6 +1969,14 @@ import js as _js
 from pyodide.ffi import run_sync as _run_sync
 
 _PYDE_FILE = "<program>"
+
+
+class PydeStopped(Exception):
+    """Raised into the pupil's program when Stop is pressed during Run.
+    An ordinary Exception rather than KeyboardInterrupt: asyncio re-raises
+    KeyboardInterrupt out of the event loop as an extra uncaught error."""
+    def __init__(self, msg="Program stopped"):
+        super().__init__(msg)
 
 class _PydeDebugger:
     YIELD_EVERY = 1500   # lines between hand-backs to the browser while running freely
@@ -1926,7 +2100,7 @@ def _pyde_debug_run(src, breakpoints, mode):
     _sys.settrace(_pyde_debugger.trace)
     try:
         exec(code, ns)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, PydeStopped):
         _sys.settrace(None)
         result = {"status": "stopped"}
     except BaseException as e:
@@ -2120,6 +2294,8 @@ document.getElementById('dbg-stop').addEventListener('click', () => debugCommand
 // (On a Chromebook, hold Search/Launcher with the top-row keys to get F-keys.)
 document.addEventListener('keydown', (e) => {
   if (e.key === 'F5' && e.ctrlKey && !isDebugging) { e.preventDefault(); debugCode(); return; }
+  if (e.key === 'F5' && e.shiftKey && isRunning && !isDebugging) { e.preventDefault(); stopRun(); return; }
+  if (e.key === 'F5' && !e.ctrlKey && !e.shiftKey && !e.altKey && !isRunning) { e.preventDefault(); runCode(); return; }
   if (!isDebugging) return;
   const map = { F6: 'over', F7: 'into', F8: 'continue' };
   if (e.key === 'F5' && e.shiftKey) { e.preventDefault(); debugCommand('stop'); return; }
