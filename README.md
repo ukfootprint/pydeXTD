@@ -1,60 +1,281 @@
-# pyde
+# pydeXTD: pyde, extended for GCSE
 
-A self-contained, single-file Python IDE that runs entirely in the browser — no server, no install, no build step. Double-click `index.html`, or use it live at **[milesberry.net/pyde](https://milesberry.net/pyde/)**.
+A browser-based Python IDE for GCSE and International GCSE Computer Science.
+It runs entirely in the browser tab: there is no server, nothing to install and
+no account, so it works on **school-managed Chromebooks without the Linux
+container**.
 
-Built for teaching (GCSE/A Level CS style exercises), but useful for any quick "write and run some Python" need.
+**Live:** <https://ukfootprint.github.io/pydeXTD/>
+
+pydeXTD is a fork of **[pyde](https://github.com/milesberry/pyde) by Miles Berry**.
+It keeps everything pyde does (single page, no build step, Python running
+locally through WebAssembly) and adds the features below.
 
 ## Guides
 
-- **Teachers and tutors:** [docs/TEACHER-GUIDE.md](docs/TEACHER-GUIDE.md). Covers set-up on managed Chromebooks, data protection, teaching with each feature, making CODES packs and running mocks.
+- **Teachers, tutors and IT staff:** [docs/TEACHER-GUIDE.md](docs/TEACHER-GUIDE.md).
+  Covers set-up on managed Chromebooks, data protection, teaching with each
+  feature, making CODES packs and running mocks.
 - **Students:** [docs/STUDENT-GUIDE.md](docs/STUDENT-GUIDE.md).
 
-## Features
+## Why this fork exists
 
-- **Run Python** — full CPython 3.13, compiled to WebAssembly (via [Pyodide](https://pyodide.org)), executing directly in your tab. stdout/stderr are captured and shown in the console, with errors colour-coded.
-- **Debug** — step through a program one line at a time, Thonny-style: step into / over / out, continue, stop, and breakpoints (click the margin by a line number). A panel shows the call stack and each function's variables, highlights values that changed on the last step, and shows what a function just returned. `input()` works anywhere in the program while debugging, and turtle drawings build up live as you step. Needs Chrome or Edge 137+ (ChromeOS included); see [DEBUGGER.md](DEBUGGER.md).
-- **Trace tables** (GCSE layer, `gcse/trace.js`) — the *Trace table* tab runs the program and builds an exam-style trace table: one row per line that changed a variable or printed something, a column per variable (values shown only when they change), and Output. Inputs can be preset ("5, 3, 0"). **Practice** blanks the table for pupils to fill in and **Check** marks it cell by cell; **Copy table** pastes a blank or completed table into Word/Docs; **Share as task** makes a link that opens straight into practice. See [gcse/README.md](gcse/README.md).
-- **CODES workspace** (GCSE layer, `gcse/workspace.js`) — the *Files* button opens a panel modelled on Edexcel International GCSE (4CP0) Paper 2: load a CODES folder (folder, `.zip` or link) as read-only-by-default originals, edit and run them, and **Save as** (Ctrl+S) under the name a question gives — originals can't be overwritten, `.py` is added like IDLE. All workspace files are in Python's working folder, so `open("Q03Data.txt")` works, and files a program writes appear under *My files*, which download as a `.zip`. Includes a practice pack of original questions.
-- **Pseudocode** (GCSE layer, `gcse/pseudocode.js`) — a tab pairing each construct in the Edexcel International GCSE (4CP0) pseudocode command set with its Python equivalent and the usual translation traps (inclusive `FOR … TO`, `RANDOM(n)`, `=`/`==`, `^`/`**`, `DIV`/`MOD`, `&`). Searchable; click to copy.
-- **Mock exam** (GCSE layer, `gcse/mock.js`) — a timed rehearsal of the 4CP0 practical paper on the CODES workspace: 3-hour countdown that survives a reload, exam-irrelevant aids hidden, editing locked at the end, and a *Collect my files* check of every required file name (saved / wrong name / missing, plus unsaved edits) with a `.zip` download.
-- **New** — a clearly-labelled way to start a blank program, distinct from just deleting everything in the editor (which reads as normal practice to a pupil watching, when the point is to save the old one and start a deliberate new one).
-- **Syntax highlighting** — [CodeMirror 5](https://codemirror.net/5/) with a Python mode and a dark (Dracula) / light (Eclipse) theme toggle. Copying a selection also writes a colour-highlighted `text/html` version to the clipboard alongside the plain text, matching the current theme, so pasting into Word/OneNote/Google Docs keeps the syntax colours instead of landing as flat text.
-- **Multi-cursor editing** — select a word and press `Cmd-D` / `Ctrl-D` to select the next occurrence, VS Code / Sublime style.
-- **Block comment / indent** — select some lines, press `#` to toggle a comment prefix on all of them, or `Tab` / `Shift-Tab` to indent/dedent the block.
-- **Download / Upload** — save your code as a `.py` file, or load one from disk.
-- **Virtual input file** — paste text into the "Program input file" box and it's readable from Python via `open("filename")`. Any files your program writes are picked up automatically — text files show their content right on the page (handy on iPad, where downloading a blob is clunky), with a download link alongside; binary files are download-only.
-- **Auto-recovery** — the editor and the input file both save to `localStorage` as you type and restore automatically next visit, so closing the tab, a crash, or a hung program doesn't lose your work. A page refresh after editing further than a share link always reflects your latest changes, not the stale shared snapshot.
-- **Turtle graphics** — `import turtle` (or `from turtle import *`) renders to an on-page canvas.
-- **p5.js sketches** — write `setup()` / `draw()` functions and call `p5.background(...)`, `p5.ellipse(...)`, etc. p5.js is loaded on demand.
-- **Parsons puzzles** — turn the current code into a drag-and-drop line-reordering puzzle, with a Check button that highlights right/wrong placements, and a Copy button for the completed arrangement. Shareable as a standalone puzzle link — the answer is never loaded into the editor until solved correctly, so closing the puzzle before solving it doesn't reveal the original code.
-- **Share via URL** — the whole program (or just a Parsons puzzle) is LZ-compressed into the page's URL hash, so a link fully reproduces it with no backend. If the program reads a file via the input box above, that content travels in the link too, so a shared example that depends on it actually works for whoever opens it.
-- **Tidy** — auto-formats the code to PEP8 style with [autopep8](https://github.com/hhatto/autopep8), loaded on demand from wheels bundled in `vendor/` the first time it's used.
+It started with a GCSE student on a school-managed Chromebook. The usual way to
+run Thonny or IDLE on a Chromebook is the Linux (Crostini) container. Traffic
+from that container can bypass the school's web filtering and safeguarding
+(Smoothwall and similar), so it is turned off on managed devices.
+
+pyde already ran Python safely inside Chrome. It lacked three things: a
+Thonny-style debugger, a way to stop a runaway program, and the exam-specific
+practice the student needed. pydeXTD adds those, and makes the site easy for a
+school to approve.
+
+## What's new compared with pyde
+
+| | pyde | pydeXTD |
+|---|---|---|
+| **Debugger** | – | Thonny-style: step into, over and out; breakpoints; call stack and variables; changed values highlighted; return values shown |
+| **Stopping a program** | Reload the tab | **■ Stop** / Shift+F5 ends infinite loops, long recursion, `time.sleep()` and a waiting `input()` |
+| **`time.sleep()`** | Freezes the tab | Waits without freezing the page |
+| **`input()`** | Inline box via code rewriting, with a `prompt()` fallback | Always the inline box (Chrome/Edge) |
+| **Trace tables** | – | Exam-style tables, a marked Practice mode, copy-to-worksheet and shareable tasks |
+| **CODES-folder workspace** | One file plus one input file | Multi-file workspace modelled on Edexcel International GCSE (4CP0) Paper 2 |
+| **Pseudocode reference** | – | 4CP0 pseudocode command set next to the Python equivalents, with the usual translation traps |
+| **Mock exam** | – | Timed rehearsal of the 4CP0 practical paper with a "collect my files" check |
+| **Hosting** | Libraries from public CDNs | Everything self-hosted: a school filter allows **one host** |
+| **Python** | 3.12 (Pyodide 0.26.2) | 3.13 (Pyodide 0.29.5) |
+| **Keyboard** | – | Thonny keys: F5 run, Ctrl+F5 debug, F6/F7/F8 step, Shift+F5 stop |
+| **Tests** | – | 105 automated end-to-end checks in headless Chromium |
+
+## Features added in pydeXTD
+
+### Debugger ([DEBUGGER.md](DEBUGGER.md))
+
+**🐛 Debug** (Ctrl+F5) pauses on the first line. The controls are:
+
+- **Into** (F7), **Over** (F6), **Out**, **Continue** (F8) and **Stop**
+  (Shift+F5).
+- **Breakpoints:** click the margin or a line number.
+
+A panel under the console shows:
+
+- **the call stack**: click a frame to see its variables;
+- **the variables**, with the values changed by the last step highlighted;
+- **what a function returned**.
+
+`input()` works anywhere in the program while debugging, turtle drawings
+build up as you step, and the editor is read-only while debugging.
+
+**How it works.** The program runs under `sys.settrace`. When it should stop,
+the trace function calls Pyodide's `run_sync()` on a promise that the step
+buttons resolve. JSPI (WebAssembly JavaScript Promise Integration) suspends
+the WebAssembly stack, so the interpreter genuinely pauses while the page
+stays responsive. This needs no Web Worker, no `SharedArrayBuffer` and no
+COOP/COEP headers, so it still works as a single static page.
+
+### Stop for Run
+
+While a program runs, a red **■ Stop** button (Shift+F5) appears. It works by:
+
+- **A light `sys.monitoring` hook** on loop jumps and function calls, which
+  hands control back to the browser about every 50 ms. Stop then interrupts
+  the program. This costs about 2–3 times on very tight loops and nothing
+  noticeable on typical programs.
+- **`time.sleep()` and `input()`** waiting through `run_sync()`, so they no
+  longer freeze the tab.
+
+F5 runs the program, as in Thonny.
+
+### GCSE layer ([gcse/README.md](gcse/README.md))
+
+These are self-contained modules, each attached to the page by one
+`<script>` tag:
+
+- **Trace tables** (`gcse/trace.js`). The **Trace table** tab runs the program
+  and builds an exam-style table:
+  - one row per line that changed a variable or printed something;
+  - values shown only when they change;
+  - inputs can be preset, e.g. `5, 3, 0`;
+  - variables can be hidden to match a question.
+
+  **Practice** blanks the table and **Check** marks it cell by cell, leniently
+  on quotes, number format and spacing. **Copy table** pastes a blank or
+  completed table into Word or Docs. **Share as task** creates a link that
+  opens straight into Practice mode.
+- **CODES-folder workspace** (`gcse/workspace.js`). **📁 Files** opens a panel
+  modelled on 4CP0 Paper 2:
+  - originals that can be edited and run but **never overwritten**;
+  - **Save as** (Ctrl+S) under the name a question gives, adding `.py` as
+    IDLE does;
+  - data files readable with `open()`, and files a program writes appear
+    under *My files*;
+  - packs load from a folder, a `.zip` or a share link; *My files* download as
+    a `.zip`.
+
+  It includes a practice pack of original questions.
+- **Pseudocode reference** (`gcse/pseudocode.js`). This pairs each construct
+  in the 4CP0 pseudocode command set with its Python equivalent and its
+  traps: `FOR … TO` is inclusive, `RANDOM(n)` includes `n`, `=` versus `==`,
+  `^` versus `**`, `DIV`/`MOD`, and `&` versus `str()`. It has a search box
+  and click-to-copy.
+- **Mock exam** (`gcse/mock.js`). This is a timed rehearsal of the practical
+  paper:
+  - a 3-hour countdown that survives a reload;
+  - aids the exam doesn't provide are hidden;
+  - editing locks at the end;
+  - **Collect my files** checks every required file name (saved, wrong name or
+    missing) and flags unsaved edits, then downloads a dated `.zip`.
+
+### Self-hosting ([vendor/README.md](vendor/README.md))
+
+Pyodide, CodeMirror, lz-string, p5.js, the Fira Code font and Tidy's
+autopep8/pycodestyle wheels are all served from `vendor/`. There are no
+third-party CDNs and no PyPI downloads at runtime, so a school web filter only
+needs to allow the site's own host. Opening `index.html` straight from disk
+(`file://`) still works: in that case only, Pyodide is loaded from jsDelivr.
+
+## Features inherited from pyde
+
+- **Run Python:** full CPython (3.13 here) compiled to WebAssembly by
+  [Pyodide](https://pyodide.org), running in the tab. Output and errors appear
+  in the console, colour-coded.
+- **New:** a clearly labelled way to start a blank program.
+- **Syntax highlighting:** [CodeMirror 5](https://codemirror.net/5/) with
+  Dracula (dark) and Eclipse (light) themes. Copying a selection also copies a
+  colour-highlighted version, so pasting into Word, OneNote or Google Docs
+  keeps the colours.
+- **Editing shortcuts:** `Ctrl-D` / `Cmd-D` selects the next occurrence of a
+  word. With lines selected, `#` toggles a comment on each of them, and Tab or
+  Shift-Tab indents or dedents the block.
+- **Download / Upload:** save the code as a `.py` file, or load one.
+- **Program input file:** paste text into the box and read it from Python with
+  `open("filename")`. Files the program writes are shown on the page with a
+  download link.
+- **Auto-recovery:** the editor and the input file are saved to `localStorage`
+  as you type, so a crash or a hung program doesn't lose work.
+- **Turtle graphics:** `import turtle` draws on an on-page canvas, using a
+  canvas-based stand-in for the standard library module.
+- **p5.js sketches:** write `setup()` and `draw()` and call `p5.background(...)`
+  and so on. p5.js loads on demand.
+- **Parsons puzzles:** turn the current code into a drag-and-drop ordering
+  puzzle, shareable as a link that never reveals the answer.
+- **Share via URL:** the program, and its input file, are compressed into the
+  link's `#` fragment, so no server is needed.
+- **Tidy:** auto-formats code to PEP 8 with
+  [autopep8](https://github.com/hhatto/autopep8). In pydeXTD it uses the
+  wheels bundled in `vendor/`.
 
 ## Supported libraries
 
-Because Python is run via Pyodide, most of the **standard library** works out of the box, including:
+Most of the **standard library** works, including `math`, `random`, `string`,
+`re`, `datetime`, `itertools`, `collections`, `json`, `statistics`, `decimal`,
+`fractions`, `functools`, `dataclasses`, `enum`, `typing`, `textwrap`, `copy`,
+`heapq` and `bisect`.
 
-`math`, `random`, `string`, `re`, `datetime`, `itertools`, `collections`, `json`, `statistics`, `decimal`, `fractions`, `functools`, `dataclasses`, `enum`, `typing`, `textwrap`, `copy`, `heapq`, `bisect`, and more.
+Two modules are **stand-ins** rather than the real thing, because the browser
+sandbox can't support them as they are:
 
-A couple of modules are **shimmed** rather than the real thing, because the browser sandbox can't support them as-is:
+- **`turtle`**: the real module needs Tkinter. The stand-in covers the common
+  API: `forward`, `backward`, `left`, `right`, `goto`, `circle`,
+  `penup`/`pendown`, `color`/`pencolor`/`fillcolor`, `begin_fill`/`end_fill`,
+  `write`, `Screen()`, and the short aliases (`fd`, `bk`, `lt`, `rt`, …).
+- **`p5`**: a bridge to [p5.js](https://p5js.org). `import p5; p5.whatever(...)`
+  forwards any p5.js call. `from p5 import *` gives a curated set that leaves
+  out names that would shadow Python built-ins (use `remap` instead of `map`).
+  Live values such as `p5.width` and `p5.mouseX` need the `p5.` prefix.
 
-- **`turtle`** — the real stdlib `turtle` needs Tkinter, which isn't available in a WebAssembly browser build. Instead, `import turtle` / `from turtle import *` loads a custom canvas-backed replacement covering the common API: `forward`, `backward`, `left`, `right`, `goto`, `circle`, `penup`/`pendown`, `color`/`pencolor`/`fillcolor`, `begin_fill`/`end_fill`, `write`, `Screen()`, and the usual short-form aliases (`fd`, `bk`, `lt`, `rt`, ...).
-- **`p5`** — not a real PyPI package. Detected when your code contains `import p5` / `from p5 import` or a `def draw():` function, this loads [p5.js](https://p5js.org) and exposes it as a Python module. `import p5; p5.whatever(...)` forwards any p5.js call, camelCase and all. `from p5 import *` also works, for a curated set of the common drawing/canvas/colour functions — including the snake_case and Processing-style names (`no_fill`, `no_stroke`, `size` for canvas sizing, ...) that convention expects, alongside the plain camelCase ones. Anything that would shadow a Python builtin (`map`, `min`, `max`, `print`, `pow`, ...) is deliberately left out of that starred set — `remap` is provided in place of `map`, and the rest stay reachable via `p5.min(...)` etc. Live-valued properties like `width`, `mouseX`, or `frameCount` aren't star-importable either (there's no way to make a plain Python name "live"), so use `p5.width` and friends for those.
+**Not supported:**
 
-**Not supported:** anything needing real OS features — `tkinter` (GUI), `socket` (raw networking), `subprocess`, `multiprocessing`, real threads, or the real filesystem (there's an in-memory virtual filesystem instead, used for the input/output file feature). Third-party PyPI packages (numpy, pandas, etc.) aren't loaded by default — there's no general "install any package" mechanism, deliberately: most of PyPI doesn't have a WASM build anyway, so an open door mostly just invites confusing failures. Genuinely Pyodide-supported packages (numpy included) are a small, well-understood addition when actually needed — see how the Tidy feature above loads `autopep8` via `micropip` for the pattern. If a lesson needs one, fork the repo and add it yourself, or [open an issue](https://github.com/milesberry/pyde/issues/new) to ask.
+- anything needing real operating-system features: `tkinter`, `socket`,
+  `subprocess`, `multiprocessing`, real threads, or the real filesystem (there
+  is an in-memory one instead);
+- third-party PyPI packages such as numpy. This is deliberate; see how Tidy
+  loads bundled wheels for the pattern if a lesson needs one.
 
-`input()` works. For plain (non-turtle, non-p5) programs, it shows an inline text box right in the console, keeping the full scrollback visible while you answer — this covers both `input()` at top-level code (a guess-the-number loop) and `input()` called from inside a helper function (very common — e.g. a `get_guess()` function, or a whole game wrapped in its own `def`), including chains of functions calling each other. If a program uses turtle/p5, or does something with `input()` too dynamic to safely rewrite (aliasing a function, passing it around as a value, recursion, decorators, a name shadowed elsewhere in the file), it falls back to a native `prompt()` dialog instead. See [colophon.md](colophon.md) for how (and why it can't always avoid the popup).
+`time.process_time()` always reads `0.0` inside WebAssembly; use
+`time.time()` or `time.perf_counter()` instead.
 
-`time.process_time()` doesn't work — it always reads `0.0`, even across genuine CPU-bound work, because it relies on OS-level CPU accounting that doesn't exist inside a WebAssembly sandbox. Use `time.time()` or `time.perf_counter()` for timing code instead; both work correctly.
+## Browser support
 
-**Stop.** In Chrome and Edge 137 or later (Chromebooks included), a running program can always be stopped with the Stop button or Shift+F5. That includes infinite loops, long recursion, `time.sleep()` and programs waiting for `input()`. `time.sleep()` also no longer freezes the page. There, `input()` always uses the inline box, without the code rewriting described above. A hook counts loop iterations and function calls in your code and hands control back to the browser roughly every 50 ms; this costs about 2–3x on very tight loops and nothing on typical programs. In other browsers (Safari/iPad, Firefox), an infinite loop or long `time.sleep()` will still freeze the tab: reload to recover.
+| | Chrome / Edge 137+ (incl. ChromeOS) | Safari (incl. iPad), Firefox |
+|---|---|---|
+| Run, turtle, p5, Parsons, Tidy, sharing | ✓ | ✓ |
+| CODES workspace, pseudocode reference, mock exam | ✓ | ✓ |
+| Trace tables | ✓ | ✓ with preset inputs |
+| Debugger, Stop, non-blocking `time.sleep()` | ✓ | – (disabled, with an explanation) |
+| `input()` | inline box | inline box via code rewriting, `prompt()` fallback |
+
+## Privacy
+
+- **No accounts, cookies or analytics, and no server-side code.** Python runs
+  in the browser tab.
+- **Work is stored only in that browser's `localStorage`** on that device.
+- **Share links** keep the code in the URL fragment, which browsers never send
+  to the server.
+
+The [teacher guide](docs/TEACHER-GUIDE.md#3-data-protection-and-safeguarding)
+has a summary written for DPIA screening.
 
 ## Running it locally
 
-There's nothing to install. Serve the folder with any static file server, or open `index.html` directly in a browser.
+There's nothing to install. Serve the folder with any static file server
+(`python -m http.server`), or open `index.html` directly. To publish it,
+GitHub Pages or any static host works. The live site is GitHub Pages on the
+`debugger` branch.
 
-Everything (Pyodide, CodeMirror, fonts, p5, Tidy's wheels) is served from [`vendor/`](vendor/README.md), so a published copy needs **only its own host** allowed through a school web filter. There are no third-party CDNs. The one exception is opening the file straight from disk: browsers block a `file://` page from fetching the Pyodide runtime, so it falls back to jsDelivr in that case.
+## Project layout
 
-## License
+```
+index.html            the app (pyde + debugger + Stop), plus the <script> tags for the GCSE layer
+gcse/                 trace.js, workspace.js, pseudocode.js, mock.js, README.md
+vendor/               self-hosted Pyodide, CodeMirror, lz-string, p5, fonts, wheels (+ licences)
+dev/test_debugger.py  end-to-end Playwright suite (105 checks)
+docs/                 TEACHER-GUIDE.md, STUDENT-GUIDE.md, GCSE-EDITION.md (roadmap / proposal)
+DEBUGGER.md           how the debugger and Stop work
+colophon.md           pyde's original build notes
+```
 
-[MIT](LICENSE) — use it, modify it, teach with it, no strings attached.
+## Tests
+
+`dev/test_debugger.py` runs the app in headless Chromium. The page is served
+over HTTP with **every other host blocked**, which proves the site needs only
+one host. The suite covers:
+
+- the original pyde features;
+- the debugger, Stop and `time.sleep()`;
+- trace tables, the workspace, the pseudocode tab and the mock exam;
+- the `file://` fallback, and a simulated browser without JSPI.
+
+Setup instructions are in the file's docstring.
+
+## Relationship with pyde
+
+The aim is to keep pydeXTD close to pyde and to offer the general-purpose
+parts back:
+
+- Pull-request branches for Miles are prepared on this fork:
+  - `pr/1-pyodide-0.29`
+  - `pr/2-debugger`
+  - `pr/3-run-stop`
+
+  They use pyde's CDN approach and leave out the GCSE layer and self-hosting.
+- The GCSE layer is kept in separate files, so pyde updates merge cleanly. The
+  proposal for a GCSE edition, including optional extension hooks in pyde, is
+  in [docs/GCSE-EDITION.md](docs/GCSE-EDITION.md).
+
+For issues with pyde itself, see
+<https://github.com/milesberry/pyde/issues>. For the GCSE features, use this
+fork's issues.
+
+## Licence and credits
+
+[MIT](LICENSE). pyde is © Miles Berry, and the licence notice is kept. The
+pydeXTD additions are released under the same licence. Bundled libraries keep
+their own licences (see [vendor/README.md](vendor/README.md)): Pyodide
+MPL-2.0, CodeMirror MIT, lz-string MIT, p5.js LGPL-2.1, Fira Code OFL-1.1,
+autopep8 and pycodestyle MIT.
+
+The practice pack is original material. Pearson's question papers, code files
+and pseudocode booklet are © Pearson and are not included. Exam board names
+are used only to say what the material is for; nothing here is endorsed by
+any exam board.
