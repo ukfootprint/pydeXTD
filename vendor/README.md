@@ -16,12 +16,13 @@ back to loading Pyodide from jsDelivr. The other libraries load locally either w
 | `lz-string/1.5.0/` | Compresses share links | 1.5.0 | MIT |
 | `p5/1.9.4/` | p5.js, loaded on demand for sketches | 1.9.4 | LGPL-2.1 (unmodified) |
 | `fonts/fira-code/` | Fira Code latin 400/500/600 woff2 (from @fontsource) | 5.3.0 | SIL OFL 1.1 |
+| `marked/15.0.12/` | Markdown renderer for the in-app guide viewer (Help menu), loaded on first use | 15.0.12 | MIT (`marked/LICENSE.md`) |
 | `wheels/` | `autopep8` and `pycodestyle` wheels, used by the Tidy button. They're unpacked straight into site-packages, so no micropip and no PyPI access are needed. | 2.3.2 / 2.15.0 | MIT (inside each wheel's `dist-info`) |
 
 ## Updating
 
 The files come unmodified from the npm packages (`pyodide`, `codemirror`,
-`lz-string`, `p5`, `@fontsource/fira-code`) and from PyPI. When you bump a
+`lz-string`, `p5`, `@fontsource/fira-code`, `marked`) and from PyPI. When you bump a
 version:
 
 - Put the new files in a new versioned folder.

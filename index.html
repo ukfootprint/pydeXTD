@@ -260,7 +260,7 @@
     <p>Share links work the same way: the code is packed into the link itself (after the <code>#</code>), which browsers never send to the server. So a shared link doesn't put anything on our infrastructure &mdash; but it does mean a link can carry <em>any</em> program. Please don't run code from a shared link you don't trust: while your tab is open, that code can still change what's on this page.</p>
     <p>In Chrome or Edge (including Chromebooks) a running program can always be stopped with the <strong>Stop</strong> button, even an infinite loop. In other browsers, a program with an infinite loop (or a very long <code>time.sleep</code>) will freeze the page; reload the tab to recover.</p>
     <p><strong>Debug</strong> runs your program one line at a time and shows the variables as they change. Click in the margin next to a line number to set a breakpoint. Keys: Ctrl+F5 debug, F7 step into, F6 step over, F8 continue, Shift+F5 stop. Needs Chrome or Edge 137 or later (Chromebooks included).</p>
-    <p>Source, licence, and details of how this was built: <a href="https://github.com/milesberry/pyde" target="_blank" rel="noopener">github.com/milesberry/pyde</a>.</p>
+    <p>This is <strong>pydeXTD</strong>, a GCSE edition of pyde with a debugger, Stop button, trace tables, a CODES-folder workspace, a pseudocode reference and mock exams: <a href="https://github.com/ukfootprint/pydeXTD" target="_blank" rel="noopener">github.com/ukfootprint/pydeXTD</a>. Based on <a href="https://github.com/milesberry/pyde" target="_blank" rel="noopener">pyde</a> by Miles Berry (source, licence and how it was built).</p>
     <button id="about-close">Got it</button>
   </div>
 </div>
@@ -2616,8 +2616,9 @@ if (!seenDisclaimer && !autoOpenPuzzle) {
   try { localStorage.setItem('pyde-seen-disclaimer', '1'); } catch (e) { /* ignore */ }
 }
 </script>
-<!-- GCSE layer (see gcse/README.md): self-contained files - trace tables, CODES-folder workspace, pseudocode reference, mock exam. -->
+<!-- GCSE layer (see gcse/README.md): self-contained files - trace tables, CODES-folder workspace, pseudocode reference, mock exam, Help menu. -->
 <script src="gcse/trace.js"></script>
 <script src="gcse/workspace.js"></script>
 <script src="gcse/pseudocode.js"></script>
 <script src="gcse/mock.js"></script>
+<script src="gcse/help.js"></script>

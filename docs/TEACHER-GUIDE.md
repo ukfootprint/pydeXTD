@@ -224,7 +224,20 @@ There's a search box, and clicking any Python example copies it. Students get
 the official booklet with the exam paper. This tab is for learning the
 translation, so it is hidden during a mock.
 
-### 4.6 Parsons puzzles, Tidy, sharing
+### 4.6 Help menu
+
+**❓ Help** opens this guide and the student guide inside the page, using the
+same site, so it works behind the filter. It also has *About this page*.
+
+To send someone straight to a guide, use one of these links:
+
+- `…/pydeXTD/#guide=student`
+- `…/pydeXTD/#guide=teacher`
+
+During a mock only *About* is offered, because the guides include Python
+equivalents that aren't available in the exam.
+
+### 4.7 Parsons puzzles, Tidy, sharing
 
 These come from the original pyde.
 

@@ -26,6 +26,7 @@ tells you what went wrong and on which line.
 - **⬇ Download / ⬆ Upload:** save a `.py` file to your device, or open one.
 - **A− / A+:** make the text smaller or bigger.
 - **🌙 Dark / ☀️ Light:** change the colours.
+- **❓ Help:** opens this guide inside pyde, and *About this page*.
 
 > **On a Chromebook:** to use F5–F8, hold the **Search** key (🔍) and press the
 > top-row key. You can always click the buttons instead.

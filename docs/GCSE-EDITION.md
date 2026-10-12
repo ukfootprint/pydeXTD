@@ -215,6 +215,7 @@ without changing the tool's no-data design.
 - **Done:** a 4CP0 pseudocode reference (`gcse/pseudocode.js`).
 - **Done:** an exam-conditions mock of the 4CP0 practical paper
   (`gcse/mock.js`).
-- Each module is attached to pyde by one `<script>` tag. There are 105
+- **Done:** a Help menu with the guides shown in the page (`gcse/help.js`).
+- Each module is attached to pyde by one `<script>` tag. There are 112
   automated checks in total.
 - **Next:** pilot with a GCSE student on a school Chromebook behind Smoothwall.

@@ -151,3 +151,32 @@ because in the real exam they are printed there.
 delete and load, so closing the tab immediately afterwards loses nothing.
 Typing is saved after a short pause, and any pending typing is flushed when
 the page is hidden or closed.
+
+## Help menu and guide viewer (`help.js`)
+
+This replaces the toolbar's About button with **❓ Help**, which has three
+entries:
+
+- **Student guide** (`docs/STUDENT-GUIDE.md`);
+- **Teacher & tutor guide** (`docs/TEACHER-GUIDE.md`);
+- **About this page** (pyde's original pop-up, which now also links to both
+  guides).
+
+**Viewing.** Guides are fetched from the same site and rendered with marked,
+which is vendored and loaded on first use. They don't need GitHub, which a
+school filter may block.
+
+- Links between docs open in the viewer.
+- `#heading` links scroll, using GitHub-style heading ids.
+- External links open in a new tab.
+- **Print** prints only the guide, so it can be saved as a PDF.
+- From a `file://` page the viewer can't fetch the guides, so it offers a
+  GitHub link instead.
+
+**Links.** `#guide=student` and `#guide=teacher` open a guide on load.
+
+**During a mock exam** only About is offered, because the guides contain the
+Python equivalents.
+
+The site has a `.nojekyll` file, so GitHub Pages serves the `.md` files as they
+are instead of converting them to HTML.

@@ -45,7 +45,8 @@ school to approve.
 | **Hosting** | Libraries from public CDNs | Everything self-hosted: a school filter allows **one host** |
 | **Python** | 3.12 (Pyodide 0.26.2) | 3.13 (Pyodide 0.29.5) |
 | **Keyboard** | – | Thonny keys: F5 run, Ctrl+F5 debug, F6/F7/F8 step, Shift+F5 stop |
-| **Tests** | – | 105 automated end-to-end checks in headless Chromium |
+| **Help** | About pop-up | Help menu with the student and teacher guides shown in the page |
+| **Tests** | – | 112 automated end-to-end checks in headless Chromium |
 
 ## Features added in pydeXTD
 
@@ -126,9 +127,21 @@ These are self-contained modules, each attached to the page by one
   - **Collect my files** checks every required file name (saved, wrong name or
     missing) and flags unsaved edits, then downloads a dated `.zip`.
 
+### Help menu (`gcse/help.js`)
+
+**❓ Help** replaces the About button with a menu:
+
+- the **Student guide**;
+- the **Teacher & tutor guide**;
+- **About this page**.
+
+The guides are rendered inside the page from the same site, so they work
+behind a filter. Links between guides open in the viewer, and the guides can
+be printed. `#guide=student` and `#guide=teacher` link to them directly.
+
 ### Self-hosting ([vendor/README.md](vendor/README.md))
 
-Pyodide, CodeMirror, lz-string, p5.js, the Fira Code font and Tidy's
+Pyodide, CodeMirror, lz-string, p5.js, marked (for the guides), the Fira Code font and Tidy's
 autopep8/pycodestyle wheels are all served from `vendor/`. There are no
 third-party CDNs and no PyPI downloads at runtime, so a school web filter only
 needs to allow the site's own host. Opening `index.html` straight from disk
@@ -227,9 +240,9 @@ GitHub Pages or any static host works. The live site is GitHub Pages on the
 
 ```
 index.html            the app (pyde + debugger + Stop), plus the <script> tags for the GCSE layer
-gcse/                 trace.js, workspace.js, pseudocode.js, mock.js, README.md
+gcse/                 trace.js, workspace.js, pseudocode.js, mock.js, help.js, README.md
 vendor/               self-hosted Pyodide, CodeMirror, lz-string, p5, fonts, wheels (+ licences)
-dev/test_debugger.py  end-to-end Playwright suite (105 checks)
+dev/test_debugger.py  end-to-end Playwright suite (112 checks)
 docs/                 TEACHER-GUIDE.md, STUDENT-GUIDE.md, GCSE-EDITION.md (roadmap / proposal)
 DEBUGGER.md           how the debugger and Stop work
 colophon.md           pyde's original build notes
@@ -272,7 +285,7 @@ fork's issues.
 [MIT](LICENSE). pyde is © Miles Berry, and the licence notice is kept. The
 pydeXTD additions are released under the same licence. Bundled libraries keep
 their own licences (see [vendor/README.md](vendor/README.md)): Pyodide
-MPL-2.0, CodeMirror MIT, lz-string MIT, p5.js LGPL-2.1, Fira Code OFL-1.1,
+MPL-2.0, CodeMirror MIT, lz-string MIT, p5.js LGPL-2.1, marked MIT, Fira Code OFL-1.1,
 autopep8 and pycodestyle MIT.
 
 The practice pack is original material. Pearson's question papers, code files
